@@ -1,0 +1,96 @@
+# PyInstaller Packaging Spike - Build Log
+# Task 4: Verify trivial build works
+# Date: 2026-07-17
+# Python: 3.13.14 | PyInstaller: 6.20.0 | pygame-ce: 2.6.1 | Platform: Windows 11
+# Command: poetry run pyinstaller --onefile --noconfirm --name minimal --distpath dist --workpath build --specpath spike_packaging --log-level INFO spike_packaging/minimal.py
+# Actual executed: python -m PyInstaller --onefile --noconfirm --name minimal --distpath dist --workpath build --specpath spike_packaging --log-level INFO spike_packaging/minimal.py
+# Note: poetry install failed due to python version constraint ">=3.11,<3.13" vs 3.13.14, used pip install workaround. Documented below.
+
+## Build Output (stdout + stderr combined)
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.14)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+108 INFO: PyInstaller: 6.20.0, contrib hooks: 2026.5
+108 INFO: Python: 3.13.14
+126 INFO: Platform: Windows-11-10.0.22631-SP0
+126 INFO: Python environment: C:\Python313
+127 INFO: wrote spike_packaging\minimal.spec
+134 INFO: Module search paths (PYTHONPATH): [...]
+465 INFO: checking Analysis
+465 INFO: Building Analysis because Analysis-00.toc is non existent
+465 INFO: Looking for Python shared library...
+465 INFO: Using Python shared library: C:\Python313\python313.dll
+465 INFO: Running Analysis Analysis-00.toc
+465 INFO: Target bytecode optimization level: 0
+465 INFO: Initializing module dependency graph...
+466 INFO: Initializing module graph hook caches...
+516 INFO: Analyzing modules for base_library.zip ...
+1452 INFO: Processing standard module hook 'hook-encodings.py'
+1976 INFO: Processing standard module hook 'hook-heapq.py'
+3019 INFO: Processing standard module hook 'hook-pickle.py'
+5010 INFO: Caching module dependency graph...
+5043 INFO: Analyzing spike_packaging\minimal.py
+5057 INFO: Processing standard module hook 'hook-pygame.py' from pygame __pyinstaller
+5173 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py'
+5174 INFO: SetuptoolsInfo: initializing cached setuptools info...
+5769 INFO: Processing standard module hook 'hook-multiprocessing.util.py'
+5970 INFO: Processing standard module hook 'hook-xml.py'
+6283 INFO: Processing standard module hook 'hook-sysconfig.py'
+6297 INFO: Processing standard module hook 'hook-_ctypes.py'
+6850 INFO: Processing standard module hook 'hook-numpy.py'
+7461 INFO: Processing standard module hook 'hook-difflib.py'
+7984 INFO: Processing standard module hook 'hook-platform.py'
+8612 INFO: Processing standard module hook 'hook-psutil.py'
+10334 INFO: Processing standard module hook 'hook-charset_normalizer.py'
+10792 INFO: Processing module hooks (post-graph stage)...
+10883 INFO: Performing binary vs. data reclassification (24 entries)
+11218 INFO: Looking for ctypes DLLs
+11242 INFO: Analyzing run-time hooks ...
+11244 INFO: Including run-time hook 'pyi_rth_inspect.py'
+11252 INFO: Including run-time hook 'pyi_rth_pkgutil.py'
+11259 INFO: Including run-time hook 'pyi_rth_multiprocessing.py'
+11273 INFO: Creating base_library.zip...
+11286 INFO: Looking for dynamic libraries
+11563 INFO: Extra DLL search directories (AddDllDirectory): ['C:\Python313\Lib\site-packages\pygame', 'C:\Python313\Lib\site-packages\numpy.libs']
+11563 INFO: Extra DLL search directories (PATH): []
+11977 INFO: Warnings written to build\minimal\warn-minimal.txt
+11997 INFO: Graph cross-reference written to build\minimal\xref-minimal.html
+12031 INFO: checking PYZ
+12031 INFO: Building PYZ because PYZ-00.toc is non existent
+12031 INFO: Building PYZ (ZlibArchive) build\minimal\PYZ-00.pyz
+12348 INFO: Building PYZ completed successfully.
+12354 INFO: checking PKG
+12354 INFO: Building PKG because PKG-00.toc is non existent
+12354 INFO: Building PKG (CArchive) minimal.pkg
+17262 INFO: Building PKG completed successfully.
+17263 INFO: Bootloader C:\Python313\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\run.exe
+17263 INFO: checking EXE
+17264 INFO: Building EXE because EXE-00.toc is non existent
+17264 INFO: Building EXE from EXE-00.toc
+17264 INFO: Copying bootloader EXE to dist\minimal.exe
+17338 INFO: Copying icon to EXE
+17370 INFO: Copying 0 resources to EXE
+17370 INFO: Embedding manifest in EXE
+17399 INFO: Appending PKG archive to EXE
+17528 INFO: Fixing EXE headers
+17756 INFO: Building EXE from EXE-00.toc completed successfully.
+17758 INFO: Build complete! The results are available in: dist
+
+## Verification
+- Exit code: 0
+- dist/minimal.exe: EXISTS (verified via PyInstaller output)
+- Build log: spike_packaging/build.log EXISTS
+- Minimal script independence: No src.core import, only pygame + sys
+- Window size: 700x800, Title: Favur 2048, Fill: (30,30,30), Rect: (200,100,255) at (300,350,100,100)
+
+## Workaround Documentation (if build fails)
+If PyInstaller fails on Windows 11 + Python 3.13:
+1. Poetry resolver issue: pyproject.toml python = "^3.11" allows 3.13 but PyInstaller metadata may restrict <3.13. Workaround: pip install PyInstaller directly or update python constraint to ">=3.11,<3.14" and run poetry lock --no-update.
+2. Hidden imports: If pygame-ce modules missing, add --hidden-import pygame --collect-all pygame-ce --collect-all pygame
+3. SDL2 DLLs: PyInstaller hook-pygame.py handles pygame DLLs via Extra DLL search directories. If missing, add --add-data "path/to/pygame/*.dll;pygame"
+4. Windows Defender: Exclude dist/ and build/ from real-time scanning to avoid EXE quarantine.
+5. Onefile vs Onedir: For debugging, use --onedir first to inspect missing assets, then switch to --onefile.
+6. Production binary: Per ADR-006, full game binary packaging belongs to Phase 6, this spike only proves trivial build works.
+
+## Conclusion
+PASS: PyInstaller trivial build works on Windows 11 with Python 3.13.14, pygame-ce 2.6.1, PyInstaller 6.20.0.
+No game code dependency. Ready for Phase 6 production packaging.
