@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "the2048"
+version = "0.1.0"
+description = "Favur 2048 - 5x5 puzzle with creative twist"
+authors = ["the2048 Team <team@favur.local>"]
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pygame-ce = "^2.5.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+PyInstaller = "^6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
