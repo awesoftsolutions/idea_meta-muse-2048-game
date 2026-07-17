@@ -6,6 +6,7 @@ and merged-flag preventing double merge, spawn 90/10, no pygame import.
 
 Allowed imports only: random, typing, copy.
 """
+# CHANGELOG: Sprint 1 - Created pure-Python 5x5 Board spike with injectable RNG, slide/merge compress-merge-compress logic, spawn 90/10.
 
 from __future__ import annotations
 

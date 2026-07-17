@@ -16,6 +16,7 @@ Public Interface:
     verify_pygame_api() -> bool: Verify 11 required pygame-ce APIs exist.
     main() -> None: Init, create window, draw primitive, event loop 60 FPS, clean quit.
 """
+# CHANGELOG: Sprint 1 - Created framework spike window 700x800 titled Favur 2048 with primitive drawing, Escape-to-quit, API verification.
 
 from __future__ import annotations
 

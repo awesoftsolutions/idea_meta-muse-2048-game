@@ -1,3 +1,5 @@
+# CHANGELOG: Sprint 1 - Created minimal pygame-ce packaging spike for PyInstaller trivial build proof.
+
 import pygame
 import sys
 
