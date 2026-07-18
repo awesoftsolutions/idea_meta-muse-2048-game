@@ -40,6 +40,11 @@ from .rules import (
     is_legal_move,
     is_game_over,
 )
+from .score import (
+    DEFAULT_HIGH_SCORE_PATH,
+    Score,
+    ScoreState,
+)
 
 __all__ = [
     "Tile",
@@ -53,4 +58,7 @@ __all__ = [
     "create_empty_grid",
     "is_legal_move",
     "is_game_over",
+    "ScoreState",
+    "Score",
+    "DEFAULT_HIGH_SCORE_PATH",
 ]
