@@ -1,29 +1,22 @@
-"""src/core/__init__.py — Exports for production board.
+"""Core exports facade for headless 5x5 Tile board with rules.
 
-Purpose:
-    Public API surface for core board production. Re-exports Tile dataclass,
-    Direction enum, MergeInfo, SlideResult, Board with injectable RNG, and
-    constants BOARD_SIZE, HEAT_MIN, HEAT_MAX, plus create_empty_grid helper.
+Purpose: Re-exports 9 board symbols (Tile, Board, Direction, SlideResult,
+    MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid) plus
+    2 rules symbols (is_legal_move, is_game_over) per remediation wave
+    and pseudocode exports verification. Ensures src/core is importable
+    headlessly without pygame per ADR-015 and E007.
 
-System:
-    Pure-Python core module, no pygame, no global random. Used by game logic
-    and tests. Board implements 5x5 2048 slide/merge with compress-merge-compress
-    and merged-flag preventing double merge, spawn 90/10 heat=0 immune per ADR-009.
+System: src/core per Phase 2 architecture.
 
-Dependencies:
-    src.core.board — Tile, Board, Direction, MergeInfo, SlideResult, constants.
+Dependencies: .board and .rules modules (stdlib only, no pygame).
 
-Used-by:
-    Game controller, heat system, spawn system, tests.
+Used-by: tests/test_isolation_phase2.py, tests/test_board.py,
+    tests/test_rules.py, future game loop.
 
-Public Interface:
-    Tile(value: int, heat: int = 0) — dataclass with clamped heat 0-3.
-    Direction — Enum UP/DOWN/LEFT/RIGHT.
-    MergeInfo(position, value, source_positions, heat_gen) — merge event.
-    SlideResult(grid, score_delta, moved, merges) — slide return.
-    Board(grid, rng) — 5x5 board with injectable RNG, slide() method.
-    BOARD_SIZE, HEAT_MIN, HEAT_MAX — constants.
-    create_empty_grid() -> Grid — 5x5 None grid.
+Public interface:
+    - Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE,
+      HEAT_MIN, HEAT_MAX, create_empty_grid re-exported from .board
+    - is_legal_move, is_game_over re-exported from .rules
 """
 
 from .board import (
@@ -37,6 +30,10 @@ from .board import (
     Tile,
     create_empty_grid,
 )
+from .rules import (
+    is_legal_move,
+    is_game_over,
+)
 
 __all__ = [
     "Tile",
@@ -48,4 +45,6 @@ __all__ = [
     "HEAT_MIN",
     "HEAT_MAX",
     "create_empty_grid",
+    "is_legal_move",
+    "is_game_over",
 ]
