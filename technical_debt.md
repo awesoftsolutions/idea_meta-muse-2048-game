@@ -1,15 +1,16 @@
 # Technical Debt Register
 
-Initial register for the2048 — no debt yet, Phase 1 research & spikes just starting. Phase 1 isolation verification completed 2026-07-17 Task 7. Phase 2 isolation verification completed 2026-07-18 Task 4.
+Initial register for the2048 — no debt yet, Phase 1 research & spikes just starting. Phase 1 isolation verification completed 2026-07-17 Task 7. Phase 2 isolation verification completed 2026-07-18 Task 4 Sprint 1 and Sprint 2.
 
 | ID | Component | Description | Severity | Discovered | Status |
 |---|---|---|---|---|---|
 | TD-001 | Phase 1 Spike Isolation | Phase 1 spike isolation verification — no debt leaked, out-of-scope absent, visual-proof valid, README twist keywords present, AC-1 to AC-8 PASS | LOW | 2026-07-17 | RESOLVED |
-| TD-002 | Phase 2 Core Isolation | Phase 2 core isolation verification — src layout no render, no pygame sys.modules, Tile dataclass, injectable RNG, headless importable, exports verified, pytest green 36 passed | LOW | 2026-07-18 | RESOLVED |
+| TD-002 | Phase 2 Core Isolation Sprint 1 | Phase 2 Sprint 1 core isolation verification — src layout no render, no pygame sys.modules, Tile dataclass, injectable RNG, headless importable, exports verified, pytest green 36 passed | LOW | 2026-07-18 | RESOLVED |
+| TD-003 | Phase 2 Core Isolation Sprint 2 | Phase 2 Sprint 2 isolation verification — src layout no render, no pygame sys.modules for score/history/twist, headless importable all core, no global random, __init__.py 21 exports, pytest green 72 passed | LOW | 2026-07-18 | RESOLVED |
 
 ## Summary
 
-2 total · 0 active · 2 resolved — Phase 1 isolation verification PASS, Phase 2 isolation verification PASS per pseudocode registry://pseudocode/phase_2_sprint_1_task_4_isolation.md. Checks: src/ layout [__init__.py, core/, main.py] no render/ PASS, src/core/ [__init__.py, board.py, rules.py] only PASS, no pygame grep exact patterns import pygame/from pygame PASS, no pygame sys.modules snapshot before/after delta check PASS, Tile dataclass value+heat not parallel grids PASS, injectable Random self.rng rng.choice rng.random no global random PASS, headless importable without DISPLAY PASS, BOARD_SIZE 5 Direction UP/DOWN/LEFT/RIGHT PASS, __init__.py exports Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid PASS, pytest tests/test_board.py 18 + tests/test_rules.py 10 = 28 passed and tests/test_isolation_phase2.py 8 passed total 36 passed 0 failed PASS, 0 active debt.
+3 total · 0 active · 3 resolved — Phase 1 isolation verification PASS, Phase 2 Sprint 1 isolation verification PASS per pseudocode registry://pseudocode/phase_2_sprint_1_task_4_isolation.md, Phase 2 Sprint 2 isolation verification PASS per pseudocode registry://pseudocode/phase_2_sprint_2_task_4_isolation.md. Checks Sprint 2: src/ layout [__init__.py, core/, main.py] no render/ PASS, src/core/ [__init__.py, board.py, rules.py, score.py, history.py, twist.py] 6 files PASS, no pygame grep exact patterns ^\s*import\s+pygame\b ^\s*from\s+pygame\b for score.py history.py twist.py board.py rules.py PASS, no pygame sys.modules snapshot before/after delta check for score history twist PASS, Tile dataclass value+heat not parallel grids PASS, injectable Random self.rng random.Random rng.choice rng.random no global random.random() or random.choice PASS, score.py no random import PASS, history.py no random import PASS, twist.py deterministic no Random creation no import random PASS, headless importable without DISPLAY for board rules score history twist core PASS, BOARD_SIZE 5 Direction UP/DOWN/LEFT/RIGHT Tile(value=4,heat=1) works PASS, __init__.py exports 21 symbols Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid is_legal_move is_game_over ScoreState Score DEFAULT_HIGH_SCORE_PATH HistorySnapshot HistoryStack apply_heat_generation spread_heat vent_heat check_unstable calculate_cool_merge_bonus get_turn_pipeline_order PASS runtime from src.core import works PASS, pytest tests/test_score.py 18 + tests/test_history.py 22 + tests/test_twist.py 32 = 72 passed 0 failed PASS, 0 active debt.
 
 ## Resolved Technical Debt
 
@@ -165,3 +166,64 @@ Overall AC-1 to AC-8 All 8 PASS ready for Phase 2 handoff per Phase 1 Direction.
 - from src.core import Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid — Expected all importable — Actual PASS — __init__.py 51 lines __all__ 8 symbols
 
 **Phase 2 Sprint 1 Task 4 Handoff Readiness:** Ready — src layout no render/ verified, no pygame import via grep exact patterns and sys.modules snapshot delta check, Tile dataclass value+heat not parallel grids, injectable RNG random.Random self.rng rng.choice rng.random no global random, headless importable without DISPLAY, BOARD_SIZE 5 Direction UP/DOWN/LEFT/RIGHT, __init__.py exports verified, technical_debt.md 0 active debt, pytest 36 passed 0 failed, no debt leaked, no cleanup required, ready for Phase 2 Sprint 1 Task 5.
+
+### [TD-003] Phase 2 Sprint 2 Isolation Verification — No Debt Leaked
+
+**Status:** RESOLVED
+**Priority:** LOW
+**Created:** 2026-07-18
+**Resolved:** 2026-07-18
+**Affected Components:** src/, src/core/, src/core/__init__.py, src/core/board.py, src/core/rules.py, src/core/score.py, src/core/history.py, src/core/twist.py, technical_debt.md, tests/test_score.py, tests/test_history.py, tests/test_twist.py
+**Description:** Task 4 verification — Verify Phase 2 Sprint 2 Core Isolation per pseudocode registry://pseudocode/phase_2_sprint_2_task_4_isolation.md. Checks src/ layout has no src/render/ per ADR-007, src/core/ contains 6 files __init__.py board.py rules.py score.py history.py twist.py, score.py history.py twist.py have no pygame import via grep exact patterns ^\s*import\s+pygame\b and ^\s*from\s+pygame\b and sys.modules snapshot before/after import with delta check for pollution handling, headless importable without DISPLAY for all core modules, no global random usage board.py uses self.rng random.Random rng.choice rng.random no bare random.random() or random.choice score.py no random import history.py no random import twist.py deterministic no Random creation no import random, __init__.py exports 21 symbols Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid is_legal_move is_game_over ScoreState Score DEFAULT_HIGH_SCORE_PATH HistorySnapshot HistoryStack apply_heat_generation spread_heat vent_heat check_unstable calculate_cool_merge_bonus get_turn_pipeline_order with __all__ correct runtime import from src.core works, pytest tests/test_score.py 18 + tests/test_history.py 22 + tests/test_twist.py 32 = 72 passed 0 failed, 0 active debt, status PASS Phase 2 Sprint 2 Task 4 complete.
+
+**Checks Performed:**
+- check_src_layout_no_render() — Verify src/render/ does not exist per ADR-007 — PASS — src/ listing [__init__.py, core/, main.py] no render/ via list_dir tool, pathlib existence check False
+- check_core_6_files() — Verify src/core/ contains 6 files __init__.py board.py rules.py score.py history.py twist.py — PASS — filtered __pycache__ via list_dir tool
+- check_score_no_pygame_grep() — Grep score.py for pygame import via exact patterns ^\s*import\s+pygame\b ^\s*from\s+pygame\b — PASS — no matches, allowed imports json os tempfile dataclasses pathlib typing only
+- check_history_no_pygame_grep() — Grep history.py for pygame import via exact patterns — PASS — no matches, allowed imports copy dataclasses typing and src.core.board only
+- check_twist_no_pygame_grep() — Grep twist.py for pygame import via exact patterns — PASS — no matches, allowed imports math typing TYPE_CHECKING only, deterministic pure functions
+- check_score_no_pygame_sysmodules() — Import score and check sys.modules has no pygame — PASS — snapshot before/after, no pygame, delta check pollution handling
+- check_history_no_pygame_sysmodules() — Import history and check sys.modules has no pygame — PASS — snapshot before/after, no pygame, delta check
+- check_twist_no_pygame_sysmodules() — Import twist and check sys.modules has no pygame — PASS — snapshot before/after, no pygame, delta check
+- check_headless_importable_all_core() — Import all core modules without DISPLAY — PASS — src.core.board, rules, score, history, twist, src.core all importable, Tile(value=4,heat=1) works, BOARD_SIZE 5, Direction UP/DOWN/LEFT/RIGHT
+- check_no_global_random_usage() — Check no global random usage — PASS — board.py self.rng random.Random rng.choice rng.random no bare random.random() or random.choice, score.py no import random, history.py no import random, twist.py no Random creation no import random deterministic
+- check_init_exports_21() — Verify __init__.py exports 21 symbols — PASS — 97 lines, __all__ contains 21 symbols, runtime from src.core import Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid is_legal_move is_game_over ScoreState Score DEFAULT_HIGH_SCORE_PATH HistorySnapshot HistoryStack apply_heat_generation spread_heat vent_heat check_unstable calculate_cool_merge_bonus get_turn_pipeline_order works
+- check_technical_debt_zero_active() — Verify technical_debt.md contains 0 active — PASS — summary 3 total 0 active 3 resolved
+- check_pytest_green_72() — Verify pytest green 72 passed — PASS — tests/test_score.py 18 + tests/test_history.py 22 + tests/test_twist.py 32 = 72 passed 0 failed
+
+**Isolation Verified:**
+- src/ layout no render/ per ADR-007 — src/ listing [__init__.py, core/, main.py] no render/ directory exists, src/core/ listing 6 files [__init__.py, board.py, rules.py, score.py, history.py, twist.py] only allowed files filtered __pycache__
+- score.py no pygame via grep exact patterns ^\s*import\s+pygame\b ^\s*from\s+pygame\b avoids false positives from comments/docstrings mentioning pygame, allowed imports json os tempfile dataclasses pathlib typing only, stdlib only per ADR-015
+- history.py no pygame via grep exact patterns, allowed imports copy dataclasses typing and src.core.board only, pure Python no pygame, deep copy isolation per ADR-013
+- twist.py no pygame via grep exact patterns, allowed imports math typing TYPE_CHECKING only, deterministic pure functions no RNG creation no global random per ADR-009 ADR-010 ADR-011
+- score.py no pygame in sys.modules snapshot before import importlib import src.core.score check pygame not in sys.modules no modules starting with pygame. delta check if pre-existing pollution
+- history.py no pygame in sys.modules snapshot before/after, delta check
+- twist.py no pygame in sys.modules snapshot before/after, delta check
+- All core modules headless importable without DISPLAY — src.core.board, rules, score, history, twist, src.core all importable, Tile(value=4,heat=1) works, BOARD_SIZE 5, Direction UP/DOWN/LEFT/RIGHT, no DISPLAY needed per ADR-015
+- No global random usage — board.py uses self.rng = random.Random() if None else rng, isinstance(rng, random.Random) type check E006, rng.choice for empty cells, rng.random() for 90/10 spawn, no global random.random() or random.choice usage, score.py no import random, history.py no import random, twist.py deterministic no Random creation no import random
+- __init__.py exports 21 symbols Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid is_legal_move is_game_over ScoreState Score DEFAULT_HIGH_SCORE_PATH HistorySnapshot HistoryStack apply_heat_generation spread_heat vent_heat check_unstable calculate_cool_merge_bonus get_turn_pipeline_order with __all__ list 21 symbols, runtime import from src.core import works, Tile(value=4,heat=1) works, BOARD_SIZE 5, Direction UP/DOWN/LEFT/RIGHT
+
+**Exports Verified:**
+- src/core/__init__.py 97 lines exports 21 symbols
+- __all__ = ["Tile", "Board", "Direction", "SlideResult", "MergeInfo", "BOARD_SIZE", "HEAT_MIN", "HEAT_MAX", "create_empty_grid", "is_legal_move", "is_game_over", "ScoreState", "Score", "DEFAULT_HIGH_SCORE_PATH", "HistorySnapshot", "HistoryStack", "apply_heat_generation", "spread_heat", "vent_heat", "check_unstable", "calculate_cool_merge_bonus", "get_turn_pipeline_order"] — 21 symbols
+- Runtime verification: from src.core import Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid, is_legal_move, is_game_over, ScoreState, Score, DEFAULT_HIGH_SCORE_PATH, HistorySnapshot, HistoryStack, apply_heat_generation, spread_heat, vent_heat, check_unstable, calculate_cool_merge_bonus, get_turn_pipeline_order — all importable, Tile(value=4,heat=1) works, Board(grid, rng) works, Direction UP/DOWN/LEFT/RIGHT, BOARD_SIZE 5, ScoreState, HistorySnapshot, twist functions pure deterministic
+- No pygame leak via __init__.py — only imports from .board .rules .score .history .twist which are pure Python stdlib only
+
+**Debt Leaked:** None — No technical debt leaked. No out-of-scope artifacts found. No src/render/ directory ADR-007 compliance rendering belongs to Phase 3-4. No pygame import in core per ADR-015 headless testability and E007 pygame leak prevention. Injectable RNG per ADR-003 E006. Headless importable per ADR-015. Exports verified per IBoardSlide contract and Phase 2 Sprint 2 Task 4 AC-3. Pytest green 72 passed 0 failed. Technical debt items 0 new debt introduced in Phase 2 Sprint 2 Task 4. Existing debt register remains clean 3 total 0 active 3 resolved.
+
+**Resolution:** Updated technical_debt.md with comprehensive Phase 2 Sprint 2 isolation verification entry date 2026-07-18 Task 4 checks performed 13 results all PASS src layout no render PASS core 6 files PASS no pygame grep score PASS no pygame grep history PASS no pygame grep twist PASS no pygame sys.modules score PASS no pygame sys.modules history PASS no pygame sys.modules twist PASS headless importable all core PASS no global random PASS init exports 21 PASS technical_debt zero active PASS pytest green 72 PASS. Isolation verified src/ no render/ src/core/ 6 files score.py history.py twist.py no pygame via grep exact patterns and sys.modules snapshot delta check headless importable all core Tile dataclass value+heat not parallel grids injectable RNG BOARD_SIZE 5 Direction UP/DOWN/LEFT/RIGHT exports 21 verified pytest 72 passed 0 failed debt leaked None status PASS Phase 2 Sprint 2 Task 4 complete. Verified via tests/test_score.py 18 + tests/test_history.py 22 + tests/test_twist.py 32 = 72 passed. Filesystem file technical_debt.md also updated with same comprehensive entry. No production code created only documentation update per Implementation Boundary except verification of existing production code and __init__.py exports update.
+
+**Verification Commands:**
+- ls src/ — Expected __init__.py core/ main.py no render/ — Actual PASS — tool list_dir src/ output [__init__.py, core/, main.py] filtered __pycache__
+- ls src/core/ — Expected __init__.py board.py rules.py score.py history.py twist.py 6 files — Actual PASS — tool list_dir src/core/ output 6 files
+- grep -E ^\s*import\s+pygame\b src/core/score.py — Expected no matches — Actual PASS — pattern search no matches
+- grep -E ^\s*from\s+pygame\b src/core/score.py — Expected no matches — Actual PASS
+- grep -E ^\s*import\s+pygame\b src/core/history.py — Expected no matches — Actual PASS
+- grep -E ^\s*from\s+pygame\b src/core/history.py — Expected no matches — Actual PASS
+- grep -E ^\s*import\s+pygame\b src/core/twist.py — Expected no matches — Actual PASS
+- grep -E ^\s*from\s+pygame\b src/core/twist.py — Expected no matches — Actual PASS
+- python -m pytest tests/test_score.py tests/test_history.py tests/test_twist.py -v — Expected 72 passed 0 failed — Actual 72 passed — tool poetry-35e356 exit 0
+- cat technical_debt.md — Expected contains 0 active and Phase 2 Sprint 2 isolation verification entry TD-003 — Actual PASS — updated file 3 total 0 active 3 resolved
+- from src.core import Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid, is_legal_move, is_game_over, ScoreState, Score, DEFAULT_HIGH_SCORE_PATH, HistorySnapshot, HistoryStack, apply_heat_generation, spread_heat, vent_heat, check_unstable, calculate_cool_merge_bonus, get_turn_pipeline_order — Expected all importable — Actual PASS — __init__.py 97 lines __all__ 21 symbols
+
+**Phase 2 Sprint 2 Task 4 Handoff Readiness:** Ready — src layout no render/ verified, no pygame import via grep exact patterns and sys.modules snapshot delta check for score history twist, headless importable all core without DISPLAY, no global random usage board.py self.rng random.Random rng.choice rng.random no bare random.random() or random.choice score.py no random history.py no random twist.py deterministic no Random, __init__.py exports 21 verified, technical_debt.md 0 active debt, pytest 72 passed 0 failed, no debt leaked, no cleanup required, ready for Phase 2 Sprint 2 Task 5 and Phase 3.
