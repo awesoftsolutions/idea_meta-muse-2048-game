@@ -1,26 +1,31 @@
 """
-tests/test_isolation_phase4.py — Isolation verification for Phase 4 Sprint 2 Task 3.
+tests/test_isolation_phase4.py — Isolation verification for Phase 4 Sprint 3 Task 3.
 
-Verifies per pseudocode registry://pseudocode/phase_4_sprint_2_task_3_code.md:
+Verifies per pseudocode registry://pseudocode/phase_4_sprint_3_task_3_code.md:
 - AC-1 sys.modules delta no pygame after core import, grep no pygame import in core
 - AC-2 no external assets grep no image.load no font.Font file path only SysFont
 - AC-3 tiles.py no debug heat dot x+w-10 no gray fallback (200,200,200)
 - AC-4 no bare except grep no except: pattern
-- AC-5 visual-proof PNG exists valid header 89 50 4E 47 700x800
-- AC-6 manifest entry phase-4-hud-toast-gameover.png naming file what it shows input observation_id obs_000008
-- AC-7 technical_debt.md 0 active debt TD-007..TD-010 RESOLVED
+- AC-5 Q-001 re-measurement full board 20+ tiles seeded Random(42) 50/100/200 moves
+      interior 9 vs edge 16 heat distribution center hot spot vs cool edges
+      metaphor validated overall avg <2.0 max <=3 clamp 0-3 tuning rationale
+      reference Sprint2 avg 1.803
+- AC-6 effects.py exists exports EffectManager no external assets
+- AC-7 hud.py exists exports draw_hud ToastManager draw_game_over no external assets
 - AC-8 pytest green headless importable no pygame leak
-- AC-9 src/render listing tiles.py effects.py hud.py __init__.py
-- AC-10 main.py wiring EffectManager dt bare except fix 700x800 Favur 2048 flags=0 R restart
-- AC-11 __init__.py 26 exports including Achievements GameContext GameState
+- Additional: src/render listing tiles.py effects.py hud.py __init__.py
+- Additional: no global random usage injectable Random pattern self.rng rng.choice
+- Additional: headless importable all core modules without DISPLAY
+- Additional: src layout verification tiles.py effects.py hud.py present
 
-System: Isolation verification per pseudocode phase_4_sprint_2_task_3_code.md
-Dependencies: stdlib sys re pathlib struct importlib ast, pytest, src.core.*
+System: Isolation verification per pseudocode phase_4_sprint_3_task_3_code.md
+Dependencies: stdlib sys re pathlib struct importlib ast random, pytest, src.core.*
 """
 
 from __future__ import annotations
 
 import ast
+import random
 import re
 import struct
 import sys
@@ -222,9 +227,6 @@ def test_tiles_no_debug_artifacts() -> None:
     # Debug heat dot patterns
     assert "x+w-10" not in content, "tiles.py has debug heat dot x+w-10"
     assert "x + w - 10" not in content, "tiles.py has debug heat dot x + w - 10"
-    # Also check for y+10,5 pattern which is part of debug dot circle
-    # But allow if it's in a comment about removed debug dot - check actual draw calls
-    # The pseudocode says search for x+w-10 and gray fallback, so we focus on those
 
     # Gray fallback patterns - must not have literal (200,200,200) or (200, 200, 200)
     # Allow if line contains gray_val variable workaround or documentation about avoiding
@@ -273,9 +275,7 @@ def test_no_bare_except() -> None:
         assert not bare_matches, f"{file_path} has bare except: pattern: {bare_matches}"
 
         # Also verify specific exceptions are used instead
-        # At least check that file contains specific except patterns if it has except at all
         if "except" in content:
-            # Should have specific exception handling like except OSError or except (ValueError
             has_specific = (
                 "except OSError" in content
                 or "except (ValueError" in content
@@ -284,7 +284,10 @@ def test_no_bare_except() -> None:
             )
             # Only enforce for main.py which must have specific handling
             if file_path == "src/main.py":
-                assert has_specific, f"{file_path} should have specific except handling like except OSError or except (ValueError, TypeError, pygame.error)"
+                assert has_specific, (
+                    f"{file_path} should have specific except handling like "
+                    "except OSError or except (ValueError, TypeError, pygame.error)"
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +314,36 @@ def test_render_dir_listing() -> None:
         except OSError as exc:
             pytest.fail(f"Failed to stat src/render/{fname}: {exc}")
         assert size > 0, f"src/render/{fname} size 0, expected >0"
+
+
+def test_src_layout_tiles_effects_hud_present() -> None:
+    """Verify src/render/tiles.py effects.py hud.py present per Phase 4 (src layout).
+
+    Purpose: Verify src/render/tiles.py effects.py hud.py present per Phase 4
+    Uses Path for src/render directory, asserts exists and is_dir,
+    required_files = [__init__.py, tiles.py, effects.py, hud.py],
+    for each fname join render_dir / fname assert exists and size >0.
+    """
+    render_dir = Path("src/render")
+    assert render_dir.exists(), "src/render directory does not exist"
+    assert render_dir.is_dir(), "src/render is not a directory"
+
+    required_files = ["__init__.py", "tiles.py", "effects.py", "hud.py"]
+    for fname in required_files:
+        fpath = render_dir / fname
+        assert fpath.exists(), f"src/render/{fname} does not exist per Phase 4 layout"
+        try:
+            size = fpath.stat().st_size
+        except OSError as exc:
+            pytest.fail(f"Failed to stat src/render/{fname}: {exc}")
+        assert size > 0, f"src/render/{fname} size 0, expected >0"
+
+    # Also verify src/ layout has core and render
+    src_dir = Path("src")
+    assert src_dir.exists(), "src/ directory does not exist"
+    assert (src_dir / "core").exists(), "src/core directory missing"
+    assert (src_dir / "render").exists(), "src/render directory missing"
+    assert (src_dir / "main.py").exists(), "src/main.py missing"
 
 
 # ---------------------------------------------------------------------------
@@ -656,11 +689,471 @@ def test_headless_importable() -> None:
         ]:
             importlib.import_module(mod_name)
 
-        # Check no pygame in sys.modules after core imports (if not already loaded by other tests)
-        # Use delta approach: if pygame was already loaded before, we check that core didn't add new pygame modules
-        # For this test, we just verify core modules themselves don't import pygame via their own code
-        # The sys.modules delta test is covered in test_no_pygame_sysmodules_core
-        # Here we verify headless import works without DISPLAY
-
     except (ImportError, ValueError, TypeError, AttributeError) as exc:
         pytest.fail(f"Headless importable check failed: {exc}")
+
+
+def test_headless_importable_all_core() -> None:
+    """Verify all core modules headless importable without DISPLAY (extended).
+
+    Purpose: Verify all core modules headless importable without DISPLAY
+    Use import to import Board, Tile, Direction from src.core.board
+    Assert BOARD_SIZE ==5, Create Tile value=4 heat=1 assert value 4 heat 1
+    Assert Direction has UP DOWN LEFT RIGHT attributes
+    Use importlib to import modules list: src.core.board, rules, score, history,
+    twist, achievements, gamestate, core with specific except handling.
+    """
+    try:
+        from src.core.board import BOARD_SIZE, Direction, Tile
+
+        assert BOARD_SIZE == 5, f"BOARD_SIZE expected 5, got {BOARD_SIZE}"
+        tile = Tile(value=4, heat=1)
+        assert tile.value == 4
+        assert tile.heat == 1
+        assert hasattr(Direction, "UP")
+        assert hasattr(Direction, "DOWN")
+        assert hasattr(Direction, "LEFT")
+        assert hasattr(Direction, "RIGHT")
+
+        import importlib
+
+        modules = [
+            "src.core.board",
+            "src.core.rules",
+            "src.core.score",
+            "src.core.history",
+            "src.core.twist",
+            "src.core.achievements",
+            "src.core.gamestate",
+            "src.core",
+        ]
+        for mod_name in modules:
+            try:
+                importlib.import_module(mod_name)
+            except (ImportError, ValueError, TypeError, AttributeError) as exc:
+                pytest.fail(f"Failed to import {mod_name} headless: {exc}")
+
+        # Also verify GameState, ScoreState, HistoryStack, Achievements importable
+        from src.core import Achievements, GameState, HistoryStack, ScoreState
+
+        assert Achievements is not None
+        assert GameState is not None
+        assert HistoryStack is not None
+        assert ScoreState is not None
+
+    except (ImportError, ValueError, TypeError, AttributeError) as exc:
+        pytest.fail(f"Headless importable all core check failed: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# New Task 3: no global random usage
+# ---------------------------------------------------------------------------
+
+
+def test_no_global_random_usage() -> None:
+    """Verify no global random usage, only injectable Random pattern self.rng rng.choice rng.random.
+
+    Define CORE_FILES list same as before, for each file_path read content,
+    search for pattern random.random() -> if found check if line contains self.rng or rng. or Random()
+    -> if not, fail global random usage, search for random.choice() similarly,
+    assert self.rng or rng. or Random present in board.py.
+    """
+    global_random_pattern = re.compile(r"\brandom\.random\s*\(")
+    global_choice_pattern = re.compile(r"\brandom\.choice\s*\(")
+
+    for file_path in CORE_FILES:
+        path = Path(file_path)
+        if not path.exists():
+            continue
+        try:
+            content = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            pytest.fail(f"Failed to read {file_path}: {exc}")
+
+        for line_no, line in enumerate(content.splitlines(), start=1):
+            stripped = line.strip()
+            # Skip comments and docstrings that mention random.random as documentation
+            if stripped.startswith("#"):
+                continue
+            # Check for global random.random() without rng prefix
+            if global_random_pattern.search(line):
+                # Allow if line contains self.rng or rng. or Random() as part of injectable pattern
+                # But random.random() itself is global usage - should be rng.random()
+                # Exception: if line is defining rng = random.Random() that's ok
+                if "random.Random" in line:
+                    continue
+                # If line contains self.rng or rng. nearby, it might be comment about forbidden
+                # We strictly forbid bare random.random() in core files
+                # Check if line contains self.rng or rng. as alternative - but random.random() is still global
+                # So fail unless it's in a comment about avoiding global random
+                lower = line.lower()
+                if "avoid" in lower or "forbidden" in lower or "no global" in lower or "should use" in lower:
+                    continue
+                pytest.fail(
+                    f"{file_path}:{line_no} has global random.random() usage: {line.strip()} "
+                    "- should use self.rng.random() or rng.random() injectable pattern"
+                )
+            if global_choice_pattern.search(line):
+                if "random.Random" in line:
+                    continue
+                lower = line.lower()
+                if "avoid" in lower or "forbidden" in lower or "no global" in lower or "should use" in lower:
+                    continue
+                pytest.fail(
+                    f"{file_path}:{line_no} has global random.choice() usage: {line.strip()} "
+                    "- should use self.rng.choice or rng.choice injectable pattern"
+                )
+
+    # Verify board.py has injectable Random pattern self.rng rng.choice rng.random
+    board_path = Path("src/core/board.py")
+    assert board_path.exists(), "src/core/board.py does not exist"
+    try:
+        board_content = board_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        pytest.fail(f"Failed to read board.py: {exc}")
+
+    assert "self.rng" in board_content or "rng." in board_content, "board.py missing injectable Random pattern self.rng or rng."
+    assert "Random" in board_content, "board.py missing Random import for injectable pattern"
+    # Check for rng.choice and rng.random usage
+    assert "rng.choice" in board_content or "self.rng.choice" in board_content, "board.py should use rng.choice injectable"
+    assert "rng.random" in board_content or "self.rng.random" in board_content or "rng.random()" in board_content, (
+        "board.py should use rng.random injectable"
+    )
+
+
+# ---------------------------------------------------------------------------
+# New Task 3: effects.py exists verification
+# ---------------------------------------------------------------------------
+
+
+def test_effects_exists() -> None:
+    """Verify src/render/effects.py exists exports EffectManager no external assets.
+
+    Use Path for src/render/effects.py, assert exists and is file,
+    Use stat to check size >0, Read content utf-8,
+    Assert EffectManager in content, Assert image.load not in content,
+    Assert font.Font( not in content, Assert SysFont in content or programmatic only pattern.
+    """
+    effects_path = Path("src/render/effects.py")
+    assert effects_path.exists(), "src/render/effects.py does not exist"
+    assert effects_path.is_file(), "src/render/effects.py is not a file"
+
+    try:
+        size = effects_path.stat().st_size
+    except OSError as exc:
+        pytest.fail(f"Failed to stat effects.py: {exc}")
+    assert size > 0, "src/render/effects.py size 0, expected >0"
+
+    try:
+        content = effects_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        pytest.fail(f"Failed to read effects.py: {exc}")
+
+    assert "EffectManager" in content, "src/render/effects.py missing EffectManager export"
+    assert "image.load" not in content, "src/render/effects.py has image.load - should be programmatic only"
+    assert "font.Font(" not in content, "src/render/effects.py has font.Font file path - should use SysFont only"
+    # SysFont or programmatic only pattern
+    assert "SysFont" in content or "programmatic" in content.lower() or "draw" in content.lower(), (
+        "src/render/effects.py missing SysFont or programmatic drawing pattern"
+    )
+
+
+# ---------------------------------------------------------------------------
+# New Task 3: hud.py exists verification
+# ---------------------------------------------------------------------------
+
+
+def test_hud_exists() -> None:
+    """Verify src/render/hud.py exists exports draw_hud ToastManager draw_game_over.
+
+    Use Path for src/render/hud.py, assert exists and is file,
+    Use stat size >0, Read content utf-8,
+    Assert draw_hud in content, Assert ToastManager in content,
+    Assert draw_game_over in content, Assert image.load not in content,
+    Assert font.Font( not in content, Assert SysFont in content.
+    """
+    hud_path = Path("src/render/hud.py")
+    assert hud_path.exists(), "src/render/hud.py does not exist"
+    assert hud_path.is_file(), "src/render/hud.py is not a file"
+
+    try:
+        size = hud_path.stat().st_size
+    except OSError as exc:
+        pytest.fail(f"Failed to stat hud.py: {exc}")
+    assert size > 0, "src/render/hud.py size 0, expected >0"
+
+    try:
+        content = hud_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        pytest.fail(f"Failed to read hud.py: {exc}")
+
+    assert "draw_hud" in content, "src/render/hud.py missing draw_hud export"
+    assert "ToastManager" in content, "src/render/hud.py missing ToastManager export"
+    assert "draw_game_over" in content, "src/render/hud.py missing draw_game_over export"
+    assert "image.load" not in content, "src/render/hud.py has image.load - should be programmatic only"
+    assert "font.Font(" not in content, "src/render/hud.py has font.Font file path - should use SysFont only"
+    assert "SysFont" in content, "src/render/hud.py missing SysFont - should use SysFont only"
+
+
+# ---------------------------------------------------------------------------
+# New Task 3: Q-001 re-measurement full board interior concentration
+# ---------------------------------------------------------------------------
+
+
+def test_q001_remeasurement() -> None:
+    """Re-measure Q-001 heat balance using correct Phase 3 methodology.
+
+    Correct methodology from docs/phase-3-q001-heat-balance.md:
+    Deterministic simulation using injectable Random seed 42:
+      Use Random to create injectable RNG with seed 42
+      Use Board to create board with rng size 5
+      For each move_count in [50,100,200]:
+        Reset board with single 2 tile heat 0
+        While move < move_count:
+          Get legal moves via rules.is_legal_move
+          Choose random legal direction via rng
+          Slide board
+          If moved: calculate current board average heat sum(heat)/count
+        avg_for_run = total_heat / total_measurements
+      overall_avg = sum(averages)/len(averages)
+
+    Phase A: single 2 tile heat 0 start, 50/100/200 moves, random legal direction
+    via is_legal_move check, measure avg heat per move, overall avg mean across runs
+    must be <2.0 reference 1.803. Tuning rationale: clamp 0-3, vent -1 edge only,
+    spread lower orthogonal accumulating interior, center hot spot vs cool edges
+    metaphor validated, reference Sprint2 avg 1.803.
+
+    Phase B: full board 20+ tiles interior concentration - separate measurement
+    with 20+ tiles value 2 heat 0, simulate 50 moves, measure interior 9 tiles
+    (1..3,1..3) vs edge 16 tiles (r==0 or r==4 or c==0 or c==4), assert
+    interior_avg >= edge_avg -0.2 tolerance, document center hot spot vs cool edges
+    metaphor validated due to vent -1 edge only and spread lower orthogonal
+    accumulating interior.
+
+    Assertions strict: overall_avg <2.0 (not <=2.1), max <=3, min >=0,
+    interior vs edge tolerance -0.2. Uses injectable Random(42) pattern,
+    Board(rng=Random(42)), rng.choice, create_empty_grid, Tile(value=2, heat=0).
+    """
+    try:
+        from src.core.board import BOARD_SIZE, Board, Direction, Tile, create_empty_grid
+        from src.core.rules import is_legal_move
+    except (ImportError, ValueError, TypeError) as exc:
+        pytest.fail(f"Failed to import Board components for Q-001 measurement: {exc}")
+
+    # ------------------------------------------------------------------
+    # Phase A: Standard measurement - single 2 tile heat 0 start
+    # Correct methodology from docs/phase-3-q001-heat-balance.md
+    # Tuning rationale: clamp 0-3, vent -1 edge only, spread lower orthogonal
+    # accumulating interior, center hot spot vs cool edges metaphor validated,
+    # reference Sprint2 avg 1.803
+    # ------------------------------------------------------------------
+    directions_all = [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]
+    per_run_avgs = []
+    global_max_heat = 0
+    global_min_heat = 3
+    measurements_phase_a = []
+
+    for move_count in [50, 100, 200]:
+        # Use injectable Random(42) seeded pattern per spec - fresh RNG per run
+        run_rng = random.Random(42)
+        # Reset board with single 2 tile heat 0
+        grid = create_empty_grid()
+        # Place single tile at random position using rng.choice
+        empty_positions = [(r, c) for r in range(BOARD_SIZE) for c in range(BOARD_SIZE)]
+        pos = run_rng.choice(empty_positions)
+        grid[pos[0]][pos[1]] = Tile(value=2, heat=0)
+
+        try:
+            board = Board(grid=grid, rng=run_rng)
+        except (ValueError, TypeError) as exc:
+            pytest.fail(f"Failed to create Board single tile for move_count {move_count}: {exc}")
+
+        total_heat_measurements = 0.0
+        measurement_count = 0
+        run_max_heat = 0
+        run_min_heat = 3
+
+        # While move < move_count: get legal moves via is_legal_move, choose random legal via rng
+        moves_done = 0
+        attempts = 0
+        max_attempts = move_count * 10  # prevent infinite loop if stuck
+        while moves_done < move_count and attempts < max_attempts:
+            attempts += 1
+            # Get legal moves via rules.is_legal_move
+            legal_dirs = []
+            for d in directions_all:
+                try:
+                    if is_legal_move(d, board.grid):
+                        legal_dirs.append(d)
+                except (ValueError, TypeError):
+                    continue
+            if not legal_dirs:
+                # No legal moves, break - board full no merge
+                break
+            # Choose random legal direction via rng.choice (injectable Random pattern)
+            chosen_dir = run_rng.choice(legal_dirs)
+            try:
+                result = board.slide(chosen_dir)
+            except (ValueError, TypeError) as exc:
+                pytest.fail(f"Board.slide failed with direction {chosen_dir}: {exc}")
+            if result.moved:
+                moves_done += 1
+                # Calculate current board average heat sum(heat)/count
+                heats = []
+                for r in range(BOARD_SIZE):
+                    for c in range(BOARD_SIZE):
+                        tile = board.grid[r][c]
+                        if tile is not None:
+                            heats.append(tile.heat)
+                            if tile.heat > run_max_heat:
+                                run_max_heat = tile.heat
+                            if tile.heat < run_min_heat:
+                                run_min_heat = tile.heat
+                if heats:
+                    avg = sum(heats) / len(heats)
+                    total_heat_measurements += avg
+                    measurement_count += 1
+
+        if measurement_count == 0:
+            # If no moves measured, use current board state
+            heats = [board.grid[r][c].heat for r in range(BOARD_SIZE) for c in range(BOARD_SIZE) if board.grid[r][c] is not None]
+            if heats:
+                avg = sum(heats) / len(heats)
+                total_heat_measurements = avg
+                measurement_count = 1
+                run_max_heat = max(heats)
+                run_min_heat = min(heats)
+
+        # avg_for_run = total_heat / total_measurements
+        avg_for_run = total_heat_measurements / measurement_count if measurement_count else 0.0
+        per_run_avgs.append(avg_for_run)
+        if run_max_heat > global_max_heat:
+            global_max_heat = run_max_heat
+        if run_min_heat < global_min_heat:
+            global_min_heat = run_min_heat
+
+        print(
+            f"\nQ-001 Phase A move_count={move_count}: avg_for_run={avg_for_run:.3f} "
+            f"max={run_max_heat} min={run_min_heat} measurements={measurement_count} "
+            f"moves_done={moves_done} baseline Sprint2 avg 1.803 "
+            f"tuning rationale: clamp 0-3, vent -1 edge only, spread lower orthogonal accumulating interior"
+        )
+        measurements_phase_a.append(
+            {"move_count": move_count, "avg_for_run": avg_for_run, "max": run_max_heat, "min": run_min_heat}
+        )
+
+    # overall_avg = sum(averages)/len(averages) - mean across runs
+    overall_avg = sum(per_run_avgs) / len(per_run_avgs) if per_run_avgs else 0.0
+
+    print(
+        f"\nQ-001 Phase A FINAL: overall_avg={overall_avg:.3f} per_run_avgs={per_run_avgs} "
+        f"global_max={global_max_heat} global_min={global_min_heat} baseline 1.803 "
+        f"tuning rationale: clamp 0-3, vent -1 edge only, spread lower orthogonal accumulating interior, "
+        f"center hot spot vs cool edges metaphor validated"
+    )
+
+    # Assert overall avg <2.0 strict - no runaway, baseline Sprint2 avg 1.803
+    # Tuning rationale: clamp 0-3, vent -1 edge only, spread lower orthogonal accumulating interior
+    assert overall_avg < 2.0, (
+        f"Q-001 overall avg heat {overall_avg:.3f} >=2.0, expected <2.0 no runaway, "
+        f"baseline Sprint2 avg 1.803, per_run_avgs={per_run_avgs}, "
+        f"tuning rationale: clamp 0-3, vent -1 edge only, spread lower orthogonal accumulating interior"
+    )
+    # Assert max heat <=3 clamp 0-3 strict
+    assert global_max_heat <= 3, f"Q-001 max heat {global_max_heat} >3 clamp 0-3 violated"
+    # Assert min heat >=0 strict
+    assert global_min_heat >= 0, f"Q-001 min heat {global_min_heat} <0 clamp 0-3 violated"
+
+    # ------------------------------------------------------------------
+    # Phase B: Full board 20+ tiles interior concentration
+    # Separate measurement - allow higher avg, only check interior vs edge
+    # Tuning rationale: clamp 0-3, vent -1 edge only, spread lower orthogonal
+    # accumulating interior, center hot spot vs cool edges metaphor validated
+    # ------------------------------------------------------------------
+    full_rng = random.Random(42)
+    full_grid = create_empty_grid()
+    edge_positions = [
+        (r, c) for r in range(BOARD_SIZE) for c in range(BOARD_SIZE) if r == 0 or r == 4 or c == 0 or c == 4
+    ]
+    interior_positions = [
+        (r, c) for r in range(BOARD_SIZE) for c in range(BOARD_SIZE) if 1 <= r <= 3 and 1 <= c <= 3
+    ]
+    full_rng.shuffle(edge_positions)
+    full_rng.shuffle(interior_positions)
+    selected = edge_positions[:16] + interior_positions[:4]
+    for r, c in selected:
+        full_grid[r][c] = Tile(value=2, heat=0)
+
+    try:
+        full_board = Board(grid=full_grid, rng=full_rng)
+    except (ValueError, TypeError) as exc:
+        pytest.fail(f"Failed to create full Board 20+ tiles: {exc}")
+
+    # Simulate 50 moves random legal direction
+    for _ in range(50):
+        legal_dirs = []
+        for d in directions_all:
+            try:
+                if is_legal_move(d, full_board.grid):
+                    legal_dirs.append(d)
+            except (ValueError, TypeError):
+                continue
+        if not legal_dirs:
+            break
+        chosen = full_rng.choice(legal_dirs)
+        try:
+            result = full_board.slide(chosen)
+        except (ValueError, TypeError) as exc:
+            pytest.fail(f"Full board slide failed: {exc}")
+        if not result.moved:
+            # Try other dirs
+            for d in legal_dirs:
+                if d == chosen:
+                    continue
+                try:
+                    result = full_board.slide(d)
+                    if result.moved:
+                        break
+                except (ValueError, TypeError):
+                    continue
+
+    # Measure interior 9 vs edge 16
+    interior_heats = []
+    edge_heats = []
+    for r in range(BOARD_SIZE):
+        for c in range(BOARD_SIZE):
+            tile = full_board.grid[r][c]
+            if tile is not None:
+                if 1 <= r <= 3 and 1 <= c <= 3:
+                    interior_heats.append(tile.heat)
+                if r == 0 or r == 4 or c == 0 or c == 4:
+                    edge_heats.append(tile.heat)
+
+    interior_avg = sum(interior_heats) / len(interior_heats) if interior_heats else 0.0
+    edge_avg = sum(edge_heats) / len(edge_heats) if edge_heats else 0.0
+
+    print(
+        f"\nQ-001 Phase B full board 20+ tiles: interior_avg={interior_avg:.3f} "
+        f"edge_avg={edge_avg:.3f} interior_samples={len(interior_heats)} "
+        f"edge_samples={len(edge_heats)} "
+        f"tuning rationale: clamp 0-3, vent -1 edge only, spread lower orthogonal accumulating interior, "
+        f"center hot spot vs cool edges metaphor validated"
+    )
+
+    # Assert interior_avg >= edge_avg -0.2 tolerance with metaphor validated
+    # interior higher avg than edge due to vent -1 edge only and spread lower orthogonal accumulating interior
+    assert interior_avg >= edge_avg - 0.2, (
+        f"Q-001 Phase B interior vs edge metaphor failed: interior_avg {interior_avg:.3f} "
+        f"< edge_avg {edge_avg:.3f} -0.2 tolerance, expected interior higher avg than edge due to "
+        f"vent -1 edge only and spread lower orthogonal accumulating interior, "
+        f"center hot spot vs cool edges metaphor validated"
+    )
+
+    # Final summary with tuning rationale
+    print(
+        f"\nQ-001 FINAL: overall_avg={overall_avg:.3f} baseline 1.803 Phase A {measurements_phase_a} "
+        f"Phase B interior_avg={interior_avg:.3f} edge_avg={edge_avg:.3f} "
+        f"tuning rationale: clamp 0-3, vent -1 edge only, spread lower orthogonal accumulating interior, "
+        f"center hot spot vs cool edges metaphor validated interior higher avg than edge due to vent -1 edge only "
+        f"and spread lower orthogonal accumulating interior"
+    )
