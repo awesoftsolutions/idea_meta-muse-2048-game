@@ -62,6 +62,11 @@ from .score import (
     Score,
     ScoreState,
 )
+from .achievements import (
+    AchievementDef,
+    Achievements,
+    GameContext,
+)
 from .twist import (
     apply_heat_generation,
     calculate_cool_merge_bonus,
@@ -94,4 +99,7 @@ __all__ = [
     "check_unstable",
     "calculate_cool_merge_bonus",
     "get_turn_pipeline_order",
+    "Achievements",
+    "AchievementDef",
+    "GameContext",
 ]
