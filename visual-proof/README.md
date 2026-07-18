@@ -1,8 +1,8 @@
-# Visual Proof Manifest Phase 1
+# Visual Proof Manifest Phase 1 + Phase 3 First Light
 
-**Phase:** 1
-**Date:** 2026-07-17
-**Gating Requirement:** SOW visual-proof per ADR-005
+**Phase:** 1, 3
+**Date:** 2026-07-17, 2026-07-18
+**Gating Requirement:** SOW visual-proof per ADR-005, Phase 3 first-light gating per ADR-019
 
 ## Entries
 
@@ -21,17 +21,34 @@
 - **screenshot:** screenshot captured via window_observe action=screenshot grid_enabled=true
 - **visual:** visual=true launch via execute_structured_command
 
+### phase-3-first-light.png
+
+- **filename:** phase-3-first-light.png
+- **path:** visual-proof/phase-3-first-light.png
+- **description:** First-light screenshot 700x800 titled Favur 2048 exact, non-resizable flags=0, reactor chrome background #0F172A (15,23,42) board #1E293B (30,41,59) empty #334155 (51,65,85) border #475569 (71,85,105), real board single 2 tile heat 0 at origin (100,150) cell_size 90 gap 10 board_size 500, heat identity #3B82F6 (59,130,246) cool blue for heat 0, blended 70% heat 30% base, value label SysFont 36 centered, HUD score SysFont 24 white at (20,20), mode label overlay bottom-right SysFont 18 "Mode: Normal - Thermal Entropy Core" and bottom-left "Favur 2048 - First Light", programmatic only no image.load no font.Font file path, glow for heat>=2 outer rect larger by 4px white #FFFFFF for heat 3.
+- **what it shows:** Real board starting tile titled window reactor chrome heat identity — 700x800 window Favur 2048, reactor chrome colors, single 2 tile heat 0 with #3B82F6 identity, score HUD, mode label overlay, first-light proof of rendering pipeline.
+- **input_sequence:** launch no input — create_initial_board with random.Random single 2 tile heat 0, first-frame capture via pygame.image.save, Escape-to-quit, 60 FPS Clock tick. No user input required for first-light — window auto-draws board and captures screenshot on first frame.
+- **capture_method:** headless pygame Surface 700x800 calling draw_board with real board single 2 tile heat 0, then pygame.image.save to visual-proof/phase-3-first-light.png with OSError handling mkdir parents True exist_ok True, plus visual=true launch via execute_structured_command poetry run python -m src.main + window_observe screenshot grid_enabled=true for visual verification.
+- **observation_id:** first-light-001
+- **observation:** first-light-001 captured via headless Surface 700x800 draw_board real board single 2 tile heat 0, reactor chrome #0F172A #1E293B #334155 #475569, heat identity #3B82F6 0 -> #F59E0B 1 -> #EF4444 2 -> #FFFFFF 3 glow, programmatic only SysFont, mode label overlay fixed corner bottom-right, PNG header 89 50 4E 47 valid.
+- **validation:** PNG header 89 50 4E 47 0D 0A 1A 0A valid, file size >1000 bytes, dimensions 700x800 exact, visual inspection confirms reactor chrome background, board background, empty cells, single 2 tile with heat identity blue, score HUD, mode label overlay.
+- **phase:** phase 3
+- **visual-proof:** visual-proof/phase-3-first-light.png
+- **screenshot:** screenshot captured via pygame.image.save headless Surface 700x800 + window_observe action=screenshot grid_enabled=true
+- **visual:** visual=true launch via execute_structured_command for verification, headless generation for CI gating
+
 ## Notes
 
 Phase 1 requires only spike screenshot per ADR-005, future phases require 5 screenshots: first light, tiles after moves, merge feedback, achievement toast, game-over.
 
-Capture protocol per pseudocode phase_1_sprint_1_task_3_code.md:
+Capture protocol per pseudocode phase_1_sprint_1_task_3_code.md and phase_3_sprint_1_wave3_rendering.md:
 - Directory Setup: create visual-proof/ if missing recursive true
 - Visual Launch: execute_structured_command with visual=true poetry run python -m src.main
-- Screenshot Capture: window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-1-spike.png observation_id recorded
-- PNG Validation: header 89 50 4E 47 and size >0
-- Manifest Creation: this file
+- Screenshot Capture: window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-1-spike.png observation_id recorded, plus headless pygame Surface 700x800 draw_board real board single 2 tile heat 0 save to phase-3-first-light.png
+- PNG Validation: header 89 50 4E 47 and size >0, dimensions 700x800 exact
+- Manifest Creation: this file with file naming what it shows input sequence observation_id per SOW Visual Verification Protocol
 - Cleanup: terminate process after capture
 
 FrameworkSpike per ADR-001, depends on pygame-ce ^2.5.0 only, no dependency on core logic.
 VisualProofSystem owns visual-proof/ directory per ADR-005 gating requirement.
+Phase 3 First Light per ADR-019: production main loop 700x800 Favur 2048 exact title non-resizable flags=0, Board single 2 tile heat 0, arrow input dispatch legal check, history push including GameState, turn pipeline locked, ScoreState HistoryStack Achievements GameState integration, undo restores exact including heat and GameState, Escape quits, clock 60 FPS, first-frame screenshot placeholder with OSError handling.
