@@ -1,14 +1,15 @@
 # Technical Debt Register
 
-Initial register for the2048 — no debt yet, Phase 1 research & spikes just starting. Phase 1 isolation verification completed 2026-07-17 Task 7.
+Initial register for the2048 — no debt yet, Phase 1 research & spikes just starting. Phase 1 isolation verification completed 2026-07-17 Task 7. Phase 2 isolation verification completed 2026-07-18 Task 4.
 
 | ID | Component | Description | Severity | Discovered | Status |
 |---|---|---|---|---|---|
 | TD-001 | Phase 1 Spike Isolation | Phase 1 spike isolation verification — no debt leaked, out-of-scope absent, visual-proof valid, README twist keywords present, AC-1 to AC-8 PASS | LOW | 2026-07-17 | RESOLVED |
+| TD-002 | Phase 2 Core Isolation | Phase 2 core isolation verification — src layout no render, no pygame sys.modules, Tile dataclass, injectable RNG, headless importable, exports verified, pytest green 36 passed | LOW | 2026-07-18 | RESOLVED |
 
 ## Summary
 
-1 total · 0 active · 1 resolved — Phase 1 isolation verification PASS, no debt leaked, spike isolation verified, out-of-scope artifacts absent, visual-proof valid PNG header 89 50 4E 47 size 32667 bytes, README twist keywords committed/rejected/rationale/Thermal Entropy Core present, AC-1 to AC-8 all PASS, ready for Phase 2 handoff.
+2 total · 0 active · 2 resolved — Phase 1 isolation verification PASS, Phase 2 isolation verification PASS per pseudocode registry://pseudocode/phase_2_sprint_1_task_4_isolation.md. Checks: src/ layout [__init__.py, core/, main.py] no render/ PASS, src/core/ [__init__.py, board.py, rules.py] only PASS, no pygame grep exact patterns import pygame/from pygame PASS, no pygame sys.modules snapshot before/after delta check PASS, Tile dataclass value+heat not parallel grids PASS, injectable Random self.rng rng.choice rng.random no global random PASS, headless importable without DISPLAY PASS, BOARD_SIZE 5 Direction UP/DOWN/LEFT/RIGHT PASS, __init__.py exports Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid PASS, pytest tests/test_board.py 18 + tests/test_rules.py 10 = 28 passed and tests/test_isolation_phase2.py 8 passed total 36 passed 0 failed PASS, 0 active debt.
 
 ## Resolved Technical Debt
 
@@ -103,3 +104,64 @@ Overall AC-1 to AC-8 All 8 PASS ready for Phase 2 handoff per Phase 1 Direction.
 - cat technical_debt.md — Expected contains isolation verification entry Task 7 no debt leaked spike isolation verified AC-1 to AC-8 summary status PASS — Actual PASS
 
 **Phase 2 Handoff Readiness:** Ready — Chosen framework version pinned and verified pygame-ce 2.6.1, committed twist Thermal Entropy Core with identity defined, slide/merge resolution algorithm validated compress-merge-compress with merged-flag, injectable RNG pattern random.Random for deterministic tests, no out-of-scope artifacts, spike isolation verified, no debt leaked, no cleanup required.
+
+### [TD-002] Phase 2 Core Isolation Verification — No Debt Leaked
+
+**Status:** RESOLVED
+**Priority:** LOW
+**Created:** 2026-07-18
+**Resolved:** 2026-07-18
+**Affected Components:** src/, src/core/, src/core/__init__.py, src/core/board.py, src/core/rules.py, technical_debt.md, tests/test_isolation_phase2.py, tests/test_board.py, tests/test_rules.py
+**Description:** Task 4 verification — Verify Phase 2 Core Isolation per pseudocode registry://pseudocode/phase_2_sprint_1_task_4_isolation.md. Checks src/ layout has no src/render/ per ADR-007, src/core/ contains only __init__.py board.py rules.py, board.py and rules.py have no pygame import via grep exact patterns ^\s*import\s+pygame\b and ^\s*from\s+pygame\b and sys.modules snapshot before/after import with delta check for pollution handling, board.py uses Tile dataclass value+heat not parallel grids heat_grid/value_grid absent, uses injectable Random self.rng random.Random rng.choice rng.random no global random.random() or random.choice, headless importable without DISPLAY, BOARD_SIZE 5 Direction UP/DOWN/LEFT/RIGHT Tile(value=4,heat=1) works Board grid 5x5, __init__.py exports Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid with __all__ correct runtime import from src.core works, pytest tests/test_board.py 18 + tests/test_rules.py 10 = 28 passed and tests/test_isolation_phase2.py 8 passed total 36 passed 0 failed, 0 active debt, status PASS Phase 2 Sprint 1 Task 4 complete.
+
+**Checks Performed:**
+- check_src_layout_no_render() — Verify src/render/ does not exist per ADR-007 — PASS — src/ listing [__init__.py, core/, main.py] no render/ via list_dir tool
+- check_core_only_init_board_rules() — Verify src/core/ contains only __init__.py board.py rules.py — PASS — filtered __pycache__ via list_dir tool
+- check_board_no_pygame_grep() — Grep board.py for pygame import via exact patterns ^\s*import\s+pygame\b ^\s*from\s+pygame\b — PASS — no matches, only docstring mention "No pygame import" allowed, allowed imports random/math/dataclasses/enum/typing only
+- check_rules_no_pygame_grep() — Grep rules.py for pygame import via exact patterns — PASS — no matches, only comment "no pygame" allowed, allowed imports typing and src.core.board only
+- check_board_no_pygame_sysmodules() — Import board and check sys.modules has no pygame — PASS — snapshot before/after, no pygame, no modules starting with pygame., delta check pollution handling, test_no_pygame_sysmodules_board PASS
+- check_rules_no_pygame_sysmodules() — Import rules and check sys.modules has no pygame — PASS — snapshot before/after, no pygame, delta check, test_no_pygame_sysmodules_rules PASS
+- check_board_headless_importable() — Import src.core.board without DISPLAY — PASS — Board class BOARD_SIZE 5 Tile dataclass value+heat Direction UP/DOWN/LEFT/RIGHT injectable RNG random.Random, test_board_headless_importable_without_DISPLAY PASS
+- check_no_global_random_usage() — Check board.py uses self.rng not global random — PASS — self.rng usage, random.Random type check, rng.choice rng.random, no bare random.random() or random.choice, test_no_global_random_usage PASS
+- check_tile_dataclass_not_parallel_grids() — Verify Tile dataclass not parallel grids — PASS — @dataclass class Tile value: int heat: int =0, no heat_grid/value_grid, Grid alias List[List[Optional[Tile]]], heat clamp max(HEAT_MIN,min(HEAT_MAX))
+- check_init_exports() — Verify __init__.py exports Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid — PASS — 51 lines, __all__ contains 8 symbols, runtime from src.core import works, test_init_exports_verification PASS
+- check_technical_debt_zero_active() — Verify technical_debt.md contains 0 active — PASS — summary 2 total 0 active 2 resolved, test_technical_debt_zero_active PASS
+- check_no_pygame_grep_comprehensive() — Comprehensive grep no pygame — PASS — test_no_pygame_grep PASS
+- check_src_render_absent() — Verify src/render/ absent — PASS — pathlib existence check, test_src_render_absent PASS
+
+**Isolation Verified:**
+- src/ layout no render/ per ADR-007 — src/ listing [__init__.py, core/, main.py] no render/ directory exists, src/core/ listing [__init__.py, board.py, rules.py] only allowed files filtered __pycache__
+- board.py no pygame via grep exact patterns ^\s*import\s+pygame\b ^\s*from\s+pygame\b avoids false positives from comments/docstrings mentioning pygame, allowed imports random/math/dataclasses/enum/typing/__future__ only
+- rules.py no pygame via grep exact patterns, allowed imports typing and src.core.board only, pure Python no pygame
+- board.py no pygame in sys.modules snapshot before import importlib import src.core.board check pygame not in sys.modules no modules starting with pygame. delta check if pre-existing pollution, test_no_pygame_sysmodules_board PASS
+- rules.py no pygame in sys.modules snapshot before/after, delta check, test_no_pygame_sysmodules_rules PASS
+- board.py headless importable without DISPLAY Board class exists BOARD_SIZE 5 Tile dataclass value+heat Direction UP/DOWN/LEFT/RIGHT injectable RNG random.Random in __init__(grid, rng) spawn 90/10 via rng.random()<0.9 deterministic seeded
+- board.py Tile dataclass not parallel grids — @dataclass class Tile value: int heat: int =0 with __post_init__ clamping heat 0-3, no heat_grid/value_grid parallel arrays, Grid = List[List[Optional[Tile]]] single grid of Tile objects per ADR-008
+- board.py injectable RNG — self.rng = random.Random() if None else rng, isinstance(rng, random.Random) type check E006, rng.choice for empty cells, rng.random() for 90/10 spawn, no global random.random() or random.choice usage
+- board.py BOARD_SIZE 5 Direction enum UP/DOWN/LEFT/RIGHT Tile(value=4,heat=1) works Board grid 5x5 create_empty_grid() returns 5x5 None grid
+- __init__.py exports Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid with __all__ list 8 symbols, runtime import from src.core import Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid works
+
+**Exports Verified:**
+- src/core/__init__.py 51 lines exports Tile Board Direction SlideResult MergeInfo BOARD_SIZE HEAT_MIN HEAT_MAX create_empty_grid
+- __all__ = ["Tile", "Board", "Direction", "SlideResult", "MergeInfo", "BOARD_SIZE", "HEAT_MIN", "HEAT_MAX", "create_empty_grid"] — 8 symbols
+- Runtime verification: from src.core import Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid — all importable, Tile(value=4,heat=1) works, Board(grid, rng) works, Direction UP/DOWN/LEFT/RIGHT, BOARD_SIZE 5
+- No pygame leak via __init__.py — only imports from .board which is pure Python
+
+**Debt Leaked:** None — No technical debt leaked. No out-of-scope artifacts found. No src/render/ directory ADR-007 compliance rendering belongs to Phase 3-4. No pygame import in core per ADR-015 headless testability and E007 pygame leak prevention. Tile dataclass not parallel grids per ADR-008. Injectable RNG per ADR-003. Headless importable per ADR-015. Exports verified per IBoardSlide contract. Pytest green 36 passed 0 failed. Technical debt items 0 new debt introduced in Phase 2 Task 4. Existing debt register remains clean 2 total 0 active 2 resolved.
+
+**Resolution:** Updated technical_debt.md with comprehensive Phase 2 isolation verification entry date 2026-07-18 Task 4 checks performed 13 results all PASS src layout no render PASS core only init board rules PASS no pygame grep board PASS no pygame grep rules PASS no pygame sys.modules board PASS no pygame sys.modules rules PASS headless importable PASS no global random PASS Tile dataclass not parallel grids PASS init exports PASS technical_debt zero active PASS no pygame grep comprehensive PASS src render absent PASS. Isolation verified src/ no render/ src/core/ only allowed files board.py no pygame via grep exact patterns and sys.modules snapshot delta check rules.py no pygame headless importable Tile dataclass value+heat not parallel grids injectable RNG BOARD_SIZE 5 Direction UP/DOWN/LEFT/RIGHT exports verified pytest 28+8=36 passed 0 failed debt leaked None status PASS Phase 2 Sprint 1 Task 4 complete. Verified via tests/test_isolation_phase2.py 8 tests PASS including test_technical_debt_zero_active which checks 0 active and isolation keywords. Filesystem file technical_debt.md also updated with same comprehensive entry. No production code created only documentation update per Implementation Boundary except verification of existing production code.
+
+**Verification Commands:**
+- ls src/ — Expected __init__.py core/ main.py no render/ — Actual PASS — tool list_dir src/ output [__init__.py, core/, main.py]
+- ls src/core/ — Expected __init__.py board.py rules.py only — Actual PASS — tool list_dir src/core/ output [__init__.py, board.py, rules.py]
+- grep -E ^\s*import\s+pygame\b src/core/board.py — Expected no matches — Actual PASS — pattern search only docstring mention "No pygame import" not actual import
+- grep -E ^\s*from\s+pygame\b src/core/board.py — Expected no matches — Actual PASS
+- grep -E ^\s*import\s+pygame\b src/core/rules.py — Expected no matches — Actual PASS
+- grep -E ^\s*from\s+pygame\b src/core/rules.py — Expected no matches — Actual PASS
+- python -m pytest tests/test_isolation_phase2.py -v — Expected 8 passed 0 failed — Actual 8 passed — tool pytest-35d861 exit 0
+- python -m pytest tests/test_board.py tests/test_rules.py -v — Expected 28 passed 0 failed — Actual 28 passed — tool pytest-207b0b exit 0
+- python -m pytest tests/test_board.py tests/test_rules.py tests/test_isolation_phase2.py -v — Expected 36 passed — Actual 36 passed (28+8)
+- cat technical_debt.md — Expected contains 0 active and Phase 2 isolation verification entry TD-002 — Actual PASS — updated file 2 total 0 active 2 resolved
+- from src.core import Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid — Expected all importable — Actual PASS — __init__.py 51 lines __all__ 8 symbols
+
+**Phase 2 Sprint 1 Task 4 Handoff Readiness:** Ready — src layout no render/ verified, no pygame import via grep exact patterns and sys.modules snapshot delta check, Tile dataclass value+heat not parallel grids, injectable RNG random.Random self.rng rng.choice rng.random no global random, headless importable without DISPLAY, BOARD_SIZE 5 Direction UP/DOWN/LEFT/RIGHT, __init__.py exports verified, technical_debt.md 0 active debt, pytest 36 passed 0 failed, no debt leaked, no cleanup required, ready for Phase 2 Sprint 1 Task 5.
