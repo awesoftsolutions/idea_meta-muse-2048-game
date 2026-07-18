@@ -1,9 +1,32 @@
 """
-src/core/rules.py — IRules contract implementation.
+src/core/rules.py — IRules contract implementation. Move legality and game-over
+detection for 5x5 Tile board, headless.
 
-Implements is_legal_move and is_game_over pure Python headless,
-no pygame, no spawn, no heat phases during legality simulation.
-Compress-merge-compress with merged-flag, value-only diff ignoring heat.
+Implements is_legal_move and is_game_over pure Python headless, no pygame,
+no spawn, no heat phases during legality simulation. Compress-merge-compress
+with merged-flag, value-only diff ignoring heat.
+
+Purpose: Pure functions is_legal_move and is_game_over per IRules contract.
+    Legal only if board values change ignoring heat, game-over true only
+    when no empty and no merge possible any direction per ADR-011.
+
+System: src/core per Phase 2 architecture.
+
+Dependencies: src/core/board.py (Tile, Direction, BOARD_SIZE), typing.
+    Stdlib only, never pygame-ce per ADR-015 and E007.
+
+Used-by: tests/test_rules.py, tests/test_isolation_phase2.py, future
+    game loop.
+
+Public interface:
+    - is_legal_move(direction, grid): bool true if slide would change values
+      ignoring heat, raises ValueError E001/E002
+    - is_game_over(grid): bool true only when no empty and no merge any
+      direction, raises ValueError E002
+    - _validate_direction, _validate_grid, _deep_copy_grid,
+      _extract_line_for_rules, _process_line_no_spawn,
+      _simulate_slide_without_spawn, _grids_differ_by_value, _has_empty,
+      _has_merge_possible: internal pure helpers
 """
 
 from __future__ import annotations
