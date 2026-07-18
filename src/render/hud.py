@@ -81,6 +81,14 @@ Public Interface:
             layout: Any=None) -> None
             Raises: ValueError if surface is None
 """
+# CHANGELOG:
+# - Phase 4 Sprint 1: CREATED ToastManager with Toast dataclass achievement_id
+#   title description elapsed duration y_offset alpha scale heat_treatment
+#   particles, heat-aware particles cool #3B82F6 calm drift warm #F59E0B flicker
+#   hot #EF4444 intense spark unstable #FFFFFF burst, stacking vertical gap 10
+#   max 5 alpha fading last 0.5 sec scale pulse 1.0->1.2->1.0 200ms reactor
+#   chrome #0F172A #1E293B #334155 #475569 programmatic only rect/circle alpha
+#   SysFont no board mutation headless importable.
 
 from __future__ import annotations
 

@@ -17,6 +17,13 @@ Public API:
 System: RenderEffects per Phase 4 architecture.
 Dependencies: pygame-ce (local import for headless), src.core.board, stdlib math random.
 """
+# CHANGELOG:
+# - Phase 4 Sprint 1: CREATED EffectManager with slide lerp 100-150ms per tile
+#   using SlideResult source_positions, merge pulse scaling 1.0->1.2->1.0 200ms,
+#   heat-aware particles cool #3B82F6 2-3 calm drift warm #F59E0B 4-5 flicker
+#   hot #EF4444 6-8 intense spark unstable #FFFFFF 10+ burst, intensity from
+#   heat_gen floor(log2(V)/2) and source_heats, programmatic only rect/circle
+#   alpha no board mutation SysFont only.
 
 from __future__ import annotations
 
