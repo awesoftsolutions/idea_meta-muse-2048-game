@@ -9,6 +9,7 @@ Exports draw_board and helpers per Phase 3 architecture.
 # - Phase 3 Sprint 2: VERIFIED exports draw_board lerp_heat_color
 #   value_to_base_color blend_colors cell_rect final audit.
 
+from src.render.effects import EffectManager
 from src.render.tiles import (
     blend_colors,
     cell_rect,
@@ -23,4 +24,5 @@ __all__ = [
     "value_to_base_color",
     "blend_colors",
     "cell_rect",
+    "EffectManager",
 ]

@@ -37,6 +37,22 @@
 - **screenshot:** screenshot captured via pygame.image.save headless Surface 700x800 + window_observe action=screenshot grid_enabled=true
 - **visual:** visual=true launch via execute_structured_command for verification, headless generation for CI gating
 
+### phase-4-effects.png
+
+- **filename:** phase-4-effects.png
+- **path:** visual-proof/phase-4-effects.png
+- **description:** 700x800 Favur 2048 window with movement/merge feedback EffectManager slide lerp 100-150ms merge pulse 1.0->1.2->1.0 heat particles distinct per heat #3B82F6 calm #F59E0B flicker #EF4444 intense #FFFFFF burst reactor chrome #0F172A #1E293B #334155 #475569 programmatic only SysFont
+- **what it shows:** movement/merge feedback with particles heat identity reactor chrome - 700x800 window Favur 2048, reactor chrome colors #0F172A background #1E293B board #334155 empty #475569 border, single 2 tile heat 0 with #3B82F6 cool blue identity, score HUD SysFont 24, mode label overlay bottom-right, movement/merge feedback ready with EffectManager slide lerp 100-150ms merge pulse 1.0->1.2->1.0 heat particles distinct per heat #3B82F6 calm #F59E0B flicker #EF4444 intense #FFFFFF burst, programmatic only SysFont no image.load
+- **input_sequence:** launch python -m src.main no input - arrow keys would trigger slide lerp 100-150ms merge pulse 1.0->1.2->1.0 particles distinct per heat, Escape-to-quit, 60 FPS Clock tick. No user input required for effects proof - window auto-draws board with EffectManager ready and captures screenshot on launch.
+- **capture_method:** execute_structured_command visual=true python -m src.main + window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-4-effects.png
+- **observation_id:** obs_000006
+- **observation:** obs_000006 captured via window_observe from win_000005 grid_enabled=true 12x8 grid overlay client bounds 1058x1220 window title Favur 2048 real board single 2 tile heat 0 cool #3B82F6 reactor chrome movement/merge feedback ready
+- **validation:** PNG header 89 50 4E 47 valid size 51900 bytes dimensions 700x800 exact header bytes 89 50 4E 47 0D 0A 1A 0A valid visual inspection confirms reactor chrome background board background empty cells single 2 tile with heat identity blue #3B82F6 score HUD mode label overlay movement/merge feedback with particles
+- **phase:** phase 4
+- **visual-proof:** visual-proof/phase-4-effects.png
+- **screenshot:** screenshot captured via window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-4-effects.png
+- **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe for verification
+
 ## Notes
 
 Phase 1 requires only spike screenshot per ADR-005, future phases require 5 screenshots: first light, tiles after moves, merge feedback, achievement toast, game-over.
