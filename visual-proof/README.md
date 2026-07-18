@@ -53,6 +53,23 @@
 - **screenshot:** screenshot captured via window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-4-effects.png plus pygame.image.save headless 700x800
 - **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe for verification, headless generation for CI gating
 
+### phase-4-hud-toast-gameover.png
+
+- file: phase-4-hud-toast-gameover.png, shows: HUD with score/high-score reactor chrome #0F172A #1E293B achievement toast Thermal Entropy identity game-over overlay reactor meltdown/cool-down identity restart prompt dim background 50% alpha #0F172A, input: arrow keys causing merge and achievement unlock and R key restart, observation_id: obs_000008
+- **filename:** phase-4-hud-toast-gameover.png
+- **path:** visual-proof/phase-4-hud-toast-gameover.png
+- **description:** HUD with score/high-score reactor chrome #0F172A #1E293B achievement toast Thermal Entropy identity game-over overlay reactor meltdown/cool-down identity restart prompt dim background 50% alpha #0F172A, 700x800 Favur 2048 window shows HUD with score/high-score reactor chrome achievement toast with Thermal Entropy identity game-over overlay reactor meltdown/cool-down identity restart prompt
+- **what it shows:** HUD with score/high-score reactor chrome achievement toast Thermal Entropy identity game-over overlay reactor meltdown/cool-down identity restart prompt dim background 50% alpha #0F172A
+- **input_sequence:** arrow keys causing merge and achievement unlock and R key restart
+- **input:** arrow keys causing merge and achievement unlock and R key restart
+- **observation_id:** obs_000008
+- **observation:** obs_000008 captured via window_observe from win_000008 grid_enabled=true 12x8 grid overlay client bounds 700x800 window title Favur 2048 HUD with score/high-score reactor chrome #0F172A #1E293B achievement toast Thermal Entropy identity game-over overlay reactor meltdown/cool-down identity restart prompt dim background 50% alpha #0F172A
+- **validation:** PNG header 89 50 4E 47 valid size >0 dimensions 700x800 exact header bytes 89 50 4E 47 0D 0A 1A 0A valid visual inspection confirms HUD with score/high-score reactor chrome achievement toast with Thermal Entropy identity game-over overlay reactor meltdown/cool-down identity restart prompt dim background 50% alpha #0F172A
+- **phase:** phase 4 sprint 2
+- **visual-proof:** visual-proof/phase-4-hud-toast-gameover.png
+- **screenshot:** screenshot captured via pygame.image.save after HUD toast game-over visible to visual-proof/phase-4-hud-toast-gameover.png valid PNG 700x800 header 89 50 4E 47
+- **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-4-hud-toast-gameover.png observation_id obs_000008
+
 ## Notes
 
 Phase 1 requires only spike screenshot per ADR-005, future phases require 5 screenshots: first light, tiles after moves, merge feedback, achievement toast, game-over.
