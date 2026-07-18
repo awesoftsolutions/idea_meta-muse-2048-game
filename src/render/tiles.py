@@ -71,7 +71,14 @@ FALLBACK_COLOR: Tuple[int, int, int] = (200, 200, 200)
 
 
 def _is_power_of_two(value: int) -> bool:
-    """Check if value is power of two >=2."""
+    """Check if value is power of two >=2.
+
+    Args:
+        value: Integer value to check for power-of-two property.
+
+    Returns:
+        True if value is power of two >=2, False otherwise.
+    """
     if not isinstance(value, int):
         return False
     if value < 2:
