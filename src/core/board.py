@@ -298,7 +298,7 @@ class MergeInfo:
             try:
                 h0 = int(self.source_heats[0])
                 h1 = int(self.source_heats[1])
-            except Exception:
+            except (ValueError, TypeError, AttributeError, IndexError):
                 object.__setattr__(self, "source_heats", (0, 0))
             else:
                 h0 = max(HEAT_MIN, min(HEAT_MAX, h0))
@@ -960,7 +960,7 @@ class Board:
         # spread: orthogonal lower transfer 1
         try:
             grid_after_spread = spread_heat(grid_after_gen)
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             grid_after_spread = grid_after_gen
 
         # vent: edge -1, returns (grid, vent_occurred)
@@ -971,7 +971,7 @@ class Board:
             else:
                 grid_after_vent = vent_result  # type: ignore
                 vent_occurred = False
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             grid_after_vent = grid_after_spread
             vent_occurred = False
 
@@ -991,7 +991,7 @@ class Board:
             else:
                 unstable_positions = unstable_result  # type: ignore
                 unstable_present = len(unstable_positions) > 0
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             unstable_positions = []
             unstable_present = False
 

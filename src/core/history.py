@@ -198,7 +198,7 @@ class HistorySnapshot:
 
                     if isinstance(gs, GSClass):
                         is_gamestate = True
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     pass
             if not is_gamestate:
                 # Allow None, but if not None and not GameState-like, raise TypeError

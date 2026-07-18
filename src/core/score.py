@@ -124,7 +124,7 @@ class ScoreState:
         else:
             try:
                 effective_path = Path(high_score_path)
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 effective_path = DEFAULT_HIGH_SCORE_PATH
 
         self.high_score_path: Path = effective_path
@@ -141,14 +141,14 @@ class ScoreState:
                 try:
                     loaded = self.load(effective_path)
                     self.high_score = loaded
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     self.high_score = 0
         else:
             # Invalid initial_high_score type, fallback to load
             try:
                 loaded = self.load(effective_path)
                 self.high_score = loaded
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 self.high_score = 0
 
     def add(self, delta: int) -> None:
@@ -185,7 +185,7 @@ class ScoreState:
             try:
                 success = self.save(self.high_score_path)
                 self.last_save_success = success
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 self.last_save_success = False
 
     def load(self, path: Optional[Path] = None) -> int:
@@ -203,7 +203,7 @@ class ScoreState:
         else:
             try:
                 effective_path = Path(path)
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 return 0
 
         try:
@@ -274,7 +274,7 @@ class ScoreState:
             return 0
         except OSError:
             return 0
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return 0
 
     def save(self, path: Optional[Path] = None) -> bool:
@@ -291,7 +291,7 @@ class ScoreState:
         else:
             try:
                 effective_path = Path(path)
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 self.last_save_success = False
                 return False
 
@@ -316,7 +316,7 @@ class ScoreState:
                 temp_file.flush()
                 try:
                     os.fsync(temp_file.fileno())
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     # fsync optional, ignore failure
                     pass
 
@@ -330,15 +330,15 @@ class ScoreState:
             if temp_path is not None:
                 try:
                     os.unlink(temp_path)
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     pass
             self.last_save_success = False
             return False
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             if temp_path is not None:
                 try:
                     os.unlink(temp_path)
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     pass
             self.last_save_success = False
             return False

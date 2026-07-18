@@ -135,7 +135,7 @@ def _clamp_heat(heat: int) -> int:
     if not isinstance(heat, int):
         try:
             heat = int(heat)
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return 0
     if heat < 0:
         return 0
@@ -152,7 +152,7 @@ def _heat_from_source_heats(source_heats: Tuple[int, int]) -> int:
         h0 = int(source_heats[0])
         h1 = int(source_heats[1])
         return _clamp_heat(max(h0, h1))
-    except Exception:
+    except (ValueError, TypeError, AttributeError, IndexError):
         return 0
 
 
@@ -244,7 +244,7 @@ class EffectManager:
                         continue
                     sr, sc = int(src_pos[0]), int(src_pos[1])
                     dr, dc = int(dest_pos[0]), int(dest_pos[1])
-                except Exception:
+                except (ValueError, TypeError, AttributeError, IndexError):
                     continue
 
                 anim = EffectAnimationState(
@@ -291,13 +291,13 @@ class EffectManager:
                     # We skip only if clearly invalid like negative huge
                     if dest_pos[0] < -10 or dest_pos[1] < -10:
                         continue
-            except Exception:
+            except (ValueError, TypeError, AttributeError, IndexError):
                 continue
 
             heat_gen = getattr(merge, "heat_gen", 0)
             try:
                 heat_gen = int(heat_gen)
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 heat_gen = 0
             heat_gen = max(0, min(3, heat_gen))
 
@@ -348,7 +348,7 @@ class EffectManager:
             # We implement: base_count = base_min + random.randint(0, base_max-base_min)
             try:
                 base_count = random.randint(base_min, base_max)
-            except Exception:
+            except (ValueError, TypeError):
                 base_count = base_min
 
             bonus = heat_gen  # intensity bonus from heat_gen
@@ -462,7 +462,7 @@ class EffectManager:
             if p.heat == 1 and p.life > 0.5 * p.max_life:
                 try:
                     alpha = random.randint(150, 255)
-                except Exception:
+                except (ValueError, TypeError):
                     pass
 
             p.alpha = max(0, min(255, alpha))
@@ -520,7 +520,7 @@ class EffectManager:
                 if layout_cell_rect is not None:
                     try:
                         x, y, w, h = layout_cell_rect(int(interp_r), int(interp_c))
-                    except Exception:
+                    except (ValueError, TypeError, AttributeError):
                         x, y, w, h = _cell_rect_screen(
                             interp_r, interp_c, board_origin_x, board_origin_y, cell_size, cell_gap
                         )
@@ -536,7 +536,7 @@ class EffectManager:
                     heat_color, _glow = lerp_heat_color(anim.heat)
                     base_color = value_to_base_color(anim.tile_value)
                     blended = blend_colors(base_color, heat_color, 0.7)
-                except Exception:
+                except (ValueError, TypeError, AttributeError, ImportError):
                     blended = (200, 200, 200)
 
                 # Scaling for merge pulse
@@ -560,11 +560,11 @@ class EffectManager:
                         )
                     except (ValueError, TypeError):
                         pass
-                    except Exception:
+                    except (ValueError, TypeError, AttributeError, TypeError):
                         # For mock surface, try without border_radius
                         try:
                             pygame.draw.rect(surface, blended, (draw_x, draw_y, draw_w, draw_h))
-                        except Exception:
+                        except (ValueError, TypeError, AttributeError):
                             pass
 
                     # Value label via SysFont None 36 centered
@@ -575,20 +575,20 @@ class EffectManager:
                         lx = draw_x + draw_w // 2 - label_rect.width // 2
                         ly = draw_y + draw_h // 2 - label_rect.height // 2
                         surface.blit(label, (lx, ly))
-                    except (ValueError, TypeError):
+                    except (ValueError, TypeError, AttributeError):
                         pass
-                    except Exception:
+                    except (ValueError, TypeError, AttributeError):
                         pass
                 else:
                     # No pygame, mock surface fallback
                     try:
                         surface.fill(blended)  # type: ignore
-                    except Exception:
+                    except (ValueError, TypeError, AttributeError):
                         pass
 
             except (ValueError, TypeError):
                 continue
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 continue
 
         # Draw particles
@@ -613,25 +613,25 @@ class EffectManager:
                             pygame.draw.circle(
                                 surface, p.color, (int(p.x), int(p.y)), p.size
                             )
-                        except Exception:
+                        except (ValueError, TypeError, AttributeError):
                             pass
-                    except Exception:
+                    except (ValueError, TypeError, AttributeError):
                         # Mock surface fallback
                         try:
                             pygame.draw.circle(
                                 surface, p.color, (int(p.x), int(p.y)), p.size
                             )
-                        except Exception:
+                        except (ValueError, TypeError, AttributeError):
                             pass
                 else:
                     # No pygame, try mock
                     try:
                         surface.blit(None, (int(p.x), int(p.y)))  # type: ignore
-                    except Exception:
+                    except (ValueError, TypeError, AttributeError):
                         pass
             except (ValueError, TypeError):
                 continue
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 continue
 
     def is_animating(self) -> bool:

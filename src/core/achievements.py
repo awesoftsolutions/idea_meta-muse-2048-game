@@ -180,7 +180,7 @@ def _check_board_has_128(board: BoardGrid) -> bool:
                 if val is not None and isinstance(val, int) and val >= 128:
                     return True
         return False
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         return False
 
 
@@ -203,7 +203,7 @@ def _check_full_board(board: BoardGrid) -> bool:
                 if cell is None:
                     return False
         return True
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         return False
 
 
@@ -233,7 +233,7 @@ def _calc_average_heat(board: BoardGrid) -> float:
         if tile_count == 0:
             return 0.0
         return total_heat / tile_count
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         return 0.0
 
 
@@ -261,7 +261,7 @@ def _create_achievements_list() -> List[AchievementDef]:
             return False
         try:
             return int(context.total_merges) >= 1
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_128_tile(context: GameContext) -> bool:
@@ -282,7 +282,7 @@ def _create_achievements_list() -> List[AchievementDef]:
             return False
         try:
             return len(merges) >= 3
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_cool_operator(context: GameContext) -> bool:
@@ -293,7 +293,7 @@ def _create_achievements_list() -> List[AchievementDef]:
             return False
         try:
             return int(vs) >= 5
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_meltdown_survivor(context: GameContext) -> bool:
@@ -304,7 +304,7 @@ def _create_achievements_list() -> List[AchievementDef]:
             return False
         try:
             return int(us) >= 3
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_undo_master(context: GameContext) -> bool:
@@ -315,7 +315,7 @@ def _create_achievements_list() -> List[AchievementDef]:
             return False
         try:
             return int(uc) >= 5
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_score_1000(context: GameContext) -> bool:
@@ -335,7 +335,7 @@ def _create_achievements_list() -> List[AchievementDef]:
             if current is None:
                 return False
             return int(current) >= 1000
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_full_board(context: GameContext) -> bool:
@@ -353,7 +353,7 @@ def _create_achievements_list() -> List[AchievementDef]:
         avg = _calc_average_heat(context.board)
         try:
             return float(avg) > 1.5
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_cold_fusion(context: GameContext) -> bool:
@@ -380,7 +380,7 @@ def _create_achievements_list() -> List[AchievementDef]:
         try:
             if len(merges) == 0:
                 return False
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
         try:
             for merge in merges:
@@ -391,10 +391,10 @@ def _create_achievements_list() -> List[AchievementDef]:
                     if isinstance(source_heats, (tuple, list)) and len(source_heats) == 2:
                         if source_heats[0] == 0 and source_heats[1] == 0:
                             return True
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     continue
             return False
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_chain_reaction(context: GameContext) -> bool:
@@ -409,7 +409,7 @@ def _create_achievements_list() -> List[AchievementDef]:
         try:
             if len(merges) < 2:
                 return False
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
         try:
             for i in range(1, len(merges)):
@@ -420,7 +420,7 @@ def _create_achievements_list() -> List[AchievementDef]:
                 if int(curr_val) > int(prev_val):
                     return True
             return False
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def condition_centurion(context: GameContext) -> bool:
@@ -431,7 +431,7 @@ def _create_achievements_list() -> List[AchievementDef]:
             return False
         try:
             return int(mc) >= 100
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return False
 
     achievements.append(
@@ -586,14 +586,14 @@ class Achievements:
                 continue
             try:
                 result = achievement.condition(context)
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 # Defensive: treat exception as False
                 result = False
             if result:
                 achievement.unlocked = True
                 try:
                     achievement.unlock_move = int(context.move_count)
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     achievement.unlock_move = 0
                 newly_unlocked.append(achievement)
         return newly_unlocked

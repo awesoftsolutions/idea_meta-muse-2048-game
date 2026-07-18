@@ -19,6 +19,8 @@ System: RenderTiles per Phase 3/4 architecture.
 Dependencies: pygame-ce, src.core.board.Tile, stdlib only.
 """
 # CHANGELOG:
+# - Phase 4 Sprint 1 Task 4: FIXED bare except to specific (ValueError, TypeError, pygame.error)
+#   per E017, preserved unified 70% heat 30% base, no debug dot, palette extension.
 # - Phase 4 Sprint 1: REFINED unified 70% heat 30% base, removed debug dot
 #   pattern at offset w minus 10, fixed >2048 gray fallback to palette extension.
 # - Phase 3 Sprint 1: CREATED programmatic tile rendering heat identity
@@ -118,7 +120,7 @@ def lerp_heat_color(heat: int) -> Tuple[Tuple[int, int, int], bool]:
     if not isinstance(heat, int):
         try:
             heat = int(heat)
-        except Exception:
+        except (ValueError, TypeError):
             heat = 0
     if heat < 0:
         heat = 0
@@ -312,21 +314,14 @@ def draw_board(
     # Draw background #0F172A (15,23,42)
     try:
         surface.fill((15, 23, 42))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, AttributeError):
         pass
-    except Exception:
-        try:
-            surface.fill((15, 23, 42))
-        except Exception:
-            pass
 
     # Board background #1E293B (30,41,59) with border radius 6
     board_rect = (BOARD_ORIGIN_X - 5, BOARD_ORIGIN_Y - 5, BOARD_SIZE_PX + 10, BOARD_SIZE_PX + 10)
     try:
         pygame.draw.rect(surface, (30, 41, 59), board_rect, border_radius=6)
-    except (ValueError, TypeError):
-        pass
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         pass
 
     # Score HUD via SysFont None 24 white at (20,20)
@@ -334,9 +329,7 @@ def draw_board(
         font_score = pygame.font.SysFont(None, 24)
         score_text = font_score.render(f"Score: {score}", True, (255, 255, 255))
         surface.blit(score_text, (20, 20))
-    except (ValueError, TypeError):
-        pass
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         pass
 
     # Draw cells
@@ -347,9 +340,7 @@ def draw_board(
             if cell is None:
                 try:
                     pygame.draw.rect(surface, (51, 65, 85), (x, y, w, h), border_radius=4)
-                except (ValueError, TypeError):
-                    pass
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     pass
             else:
                 heat_val = getattr(cell, "heat", 0)
@@ -371,16 +362,12 @@ def draw_board(
                         glow_color = (255, 255, 255)
                     try:
                         pygame.draw.rect(surface, glow_color, glow_rect, border_radius=6)
-                    except (ValueError, TypeError):
-                        pass
-                    except Exception:
+                    except (ValueError, TypeError, AttributeError):
                         pass
 
                 try:
                     pygame.draw.rect(surface, blended, (x, y, w, h), border_radius=4)
-                except (ValueError, TypeError):
-                    pass
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     pass
 
                 try:
@@ -391,9 +378,7 @@ def draw_board(
                     lx = x + w // 2 - label_rect.width // 2
                     ly = y + h // 2 - label_rect.height // 2
                     surface.blit(label, (lx, ly))
-                except (ValueError, TypeError):
-                    pass
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     pass
 
     # Mode label overlay small fixed corner bottom-right SysFont 18
@@ -406,9 +391,7 @@ def draw_board(
             "Favur 2048 - First Light", True, (light_gray, light_gray, light_gray)
         )
         surface.blit(first_light_text, (10, WINDOW_HEIGHT - 25))
-    except (ValueError, TypeError):
-        pass
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         pass
 
     # Border #475569 (71,85,105)
@@ -420,7 +403,5 @@ def draw_board(
             width=1,
             border_radius=6,
         )
-    except (ValueError, TypeError):
-        pass
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         pass
