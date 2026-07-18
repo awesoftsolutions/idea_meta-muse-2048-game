@@ -33,7 +33,8 @@ Public interface:
     - Achievements, AchievementDef, GameContext re-exported from .achievements
 """
 # CHANGELOG:
-# - Phase 2 Sprint 3 Task 3: __all__ 25 exports final verification - 9 board symbols
+# - Phase 3 Sprint 1: MODIFIED exports GameState 26.
+# - Phase 2 Sprint 3 Task 3: __all__ 25 exports final verification
 #   (Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX,
 #   create_empty_grid) plus 2 rules symbols (is_legal_move, is_game_over),
 #   3 score symbols (ScoreState, Score, DEFAULT_HIGH_SCORE_PATH),

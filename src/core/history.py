@@ -26,6 +26,7 @@ Public interface:
     - _deep_copy_twist_state: helper deep copy twist_state dict
 """
 # CHANGELOG:
+# - Phase 3 Sprint 1: MODIFIED GameState snapshot exact restore deep copy.
 # - Phase 2 Sprint 2: HistorySnapshot deep copy exact restore — grid
 #   List[List[Optional[Tile]]] deep copy including heat 0-3, score int,
 #   twist_state dict, move_number int, direction Direction, __post_init__

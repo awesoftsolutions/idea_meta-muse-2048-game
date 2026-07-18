@@ -22,6 +22,10 @@ Public interface:
       methods update_after_turn, increment_undo, reset_on_new_game,
       __eq__, __repr__, __post_init__ clamping.
 """
+# CHANGELOG:
+# - Phase 3 Sprint 1: CREATED GameState aggregator Q-005 vent_streak
+#   unstable_survival undo_count move_count update_after_turn increment_undo
+#   definitions locked ADR-016.
 
 from __future__ import annotations
 

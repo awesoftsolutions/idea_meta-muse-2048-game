@@ -59,6 +59,8 @@ Vent edge -1 clamped >=0 interior unchanged.
 Unstable threshold >=3.
 """
 # CHANGELOG:
+# - Phase 3 Sprint 1: MODIFIED vent_heat returns vent_occurred bool
+#   check_unstable returns unstable_present bool for GameState Q-005.
 # - Phase 2 Sprint 2: Thermal Entropy Core — heat generation
 #   floor(log2(V)/2) clamped 0-3 per ADR-010, orthogonal lower spread
 #   transfer 1 two-phase delta per ADR-011, edge venting -1 clamped >=0,

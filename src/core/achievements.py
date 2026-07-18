@@ -33,7 +33,9 @@ Public interface:
 """
 
 # CHANGELOG:
-# Sprint 3 — 12 distinct achievements (first_merge, 128_tile, triple_merge,
+# - Phase 3 Sprint 1: MODIFIED cold_fusion fix source_heats both 0 not proxy
+#   no false positives Q-004 ADR-017.
+# - Sprint 3 — 12 distinct achievements (first_merge, 128_tile, triple_merge,
 #   cool_operator, meltdown_survivor, undo_master, score_1000, full_board,
 #   heat_wave, cold_fusion, chain_reaction, centurion) with GameContext
 #   aggregating board/score/history/twist/last_slide_result/move_count/
