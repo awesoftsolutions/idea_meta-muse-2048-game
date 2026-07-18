@@ -1,13 +1,48 @@
 """
 src/core/board.py — Production board with Tile dataclass and slide/merge.
+Pure-Python 5x5 board with Tile dataclass, injectable RNG, headless.
 
 Implements 5x5 2048 board logic: Tile dataclass value+heat, Direction enum,
-MergeInfo with heat_gen floor(log2(V)/2), SlideResult, Board with injectable RNG,
-compress-merge-compress with merged-flag preventing double merge, spawn 90/10
-heat=0 immune per ADR-009.
+MergeInfo with heat_gen floor(log2(V)/2), SlideResult, Board with injectable
+RNG, compress-merge-compress with merged-flag preventing double merge, spawn
+90/10 heat=0 immune per ADR-009. Allowed imports only: random, math, copy,
+typing, dataclasses, enum. No pygame import, no global random usage — only
+self.rng / rng.
 
-Allowed imports only: random, math, copy, typing, dataclasses, enum.
-No pygame import, no global random usage — only self.rng / rng.
+Purpose: Production board for the2048 5x5 puzzle with Thermal Entropy Core
+    twist integration. Implements Tile dataclass value+heat single source of
+    truth per ADR-008, Board central owner of grid storage slide/merge spawn
+    per ADR-011, injectable random.Random per ADR-015, no pygame import per
+    E007 headless testability.
+
+System: src/core per Phase 2 architecture.
+
+Dependencies: stdlib only — math, random, dataclasses, enum, typing,
+    __future__. Never pygame-ce.
+
+Used-by: src/core/rules.py, src/core/twist.py (future), tests/test_board.py,
+    tests/test_isolation_phase2.py, tests/test_rules.py.
+
+Public interface:
+    - Tile: dataclass value power-of-two >=2, heat 0-3 clamped, __post_init__
+      validation E002, __eq__, __repr__
+    - Direction: Enum UP/DOWN/LEFT/RIGHT with __str__
+    - MergeInfo: dataclass position, value, source_positions, heat_gen
+      floor(log2(V)/2) clamped 0-3 per ADR-010
+    - SlideResult: dataclass grid, score_delta, moved, merges
+    - Board: class grid 5x5 Optional[Tile], rng Random injectable,
+      methods __init__, _validate_grid, _validate_direction,
+      _get_empty_cells, get_empty_cells, _extract_lines,
+      _extract_base_positions, _process_line with merged-flag,
+      _reconstruct_grid, _spawn_tile with rng.choice/rng.random heat=0,
+      spawn_tile, slide returning SlideResult, raises ValueError E001/E002,
+      TypeError E006
+    - BOARD_SIZE: constant 5
+    - HEAT_MIN: constant 0
+    - HEAT_MAX: constant 3
+    - create_empty_grid: function returns 5x5 None grid
+    - _is_power_of_two, _calc_heat_gen, _validate_grid, _validate_direction:
+      internal helpers
 """
 
 from __future__ import annotations
@@ -324,9 +359,25 @@ class Board:
     # Validation wrappers
     # ------------------------------------------------------------------
     def _validate_grid(self, grid: Grid) -> None:
+        """Validate grid via module-level helper.
+
+        Args:
+            grid: 5x5 grid to validate.
+
+        Raises:
+            ValueError: If grid malformed (E002).
+        """
         _validate_grid(grid)
 
     def _validate_direction(self, direction) -> None:
+        """Validate direction via module-level helper.
+
+        Args:
+            direction: Direction enum or string to validate.
+
+        Raises:
+            ValueError: If direction invalid (E001).
+        """
         _validate_direction(direction)
 
     # ------------------------------------------------------------------
@@ -362,7 +413,18 @@ class Board:
     def _extract_lines(
         self, grid: Grid, direction: Direction
     ) -> List[List[Optional[Tile]]]:
-        """Extract rows or columns as lines per direction."""
+        """Extract rows or columns as lines per direction.
+
+        Args:
+            grid: 5x5 grid to extract from.
+            direction: Direction to extract lines for.
+
+        Returns:
+            List of lines, each line is list of Optional[Tile] in slide order.
+
+        Raises:
+            ValueError: If direction invalid (E001) or grid malformed (E002).
+        """
         _validate_direction(direction)
         _validate_grid(grid)
         lines: List[List[Optional[Tile]]] = []
@@ -392,7 +454,14 @@ class Board:
     def _extract_base_positions(
         self, direction: Direction
     ) -> List[List[Tuple[int, int]]]:
-        """Compute base_positions per direction for MergeInfo source tracking."""
+        """Compute base_positions per direction for MergeInfo source tracking.
+
+        Args:
+            direction: Direction to compute base positions for.
+
+        Returns:
+            List of position lists, each inner list maps line index to board (r,c).
+        """
         base_positions: List[List[Tuple[int, int]]] = []
         if direction == Direction.LEFT:
             for r in range(BOARD_SIZE):
