@@ -330,20 +330,24 @@ def spread_heat(grid: Grid) -> Grid:
     return new_grid
 
 
-def vent_heat(grid: Grid) -> Grid:
+def vent_heat(grid: Grid) -> Tuple[Grid, bool]:
     """Edge venting -1 heat per turn clamped >=0 interior unchanged.
+
+    Returns (new_grid, vent_occurred) where vent_occurred True if any edge
+    tile heat reduced (before heat >0 and after < before).
 
     Args:
         grid: 5x5 List[List[Optional[Tile]]].
 
     Returns:
-        Grid with edge tiles vented -1, interior unchanged, never negative.
+        Tuple of (Grid with edge tiles vented -1, vent_occurred bool).
 
     Raises:
         ValueError: If grid not 5x5 (E002).
     """
     _validate_grid(grid)
     new_grid = _deep_copy_grid(grid)
+    vent_occurred = False
 
     for r in range(BOARD_SIZE):
         for c in range(BOARD_SIZE):
@@ -357,22 +361,26 @@ def vent_heat(grid: Grid) -> Grid:
                     new_heat = HEAT_MIN
                 if new_heat > HEAT_MAX:
                     new_heat = HEAT_MAX
+                if new_heat < existing and existing > 0:
+                    vent_occurred = True
                 new_grid[r][c] = _copy_tile(cell, new_heat=new_heat)
             else:
-                # Interior unchanged
                 continue
 
-    return new_grid
+    return new_grid, vent_occurred
 
 
-def check_unstable(grid: Grid) -> List[Tuple[int, int]]:
+def check_unstable(grid: Grid) -> Tuple[List[Tuple[int, int]], bool]:
     """Collect positions where heat >=3 unstable threshold.
+
+    Returns (positions, unstable_present) where unstable_present True if any
+    heat>=3.
 
     Args:
         grid: 5x5 List[List[Optional[Tile]]].
 
     Returns:
-        List of (r,c) unstable positions.
+        Tuple of (List of (r,c) unstable positions, unstable_present bool).
 
     Raises:
         ValueError: If grid not 5x5 (E002).
@@ -387,7 +395,8 @@ def check_unstable(grid: Grid) -> List[Tuple[int, int]]:
             heat = getattr(cell, "heat", 0)
             if heat >= UNSTABLE_THRESHOLD:
                 unstable.append((r, c))
-    return unstable
+    unstable_present = len(unstable) > 0
+    return unstable, unstable_present
 
 
 def calculate_cool_merge_bonus(merges: MergeList, grid: Grid) -> int:

@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from src.core.board import BOARD_SIZE, Direction, Tile
 
@@ -114,12 +114,16 @@ def _deep_copy_twist_state(twist_state: Optional[Dict]) -> Dict:
 class HistorySnapshot:
     """Exact snapshot for undo per ADR-013.
 
+    Extended per Phase 3 with game_state field for exact restore including
+    GameState counters.
+
     Attributes:
         grid: 5x5 board snapshot deep copied including Tile value and heat 0-3.
         score: Current score at snapshot time for exact restore.
         twist_state: Heat stats, vent streak, unstable count generic dict.
         move_number: Sequential move index for ordering and debugging.
         direction: Direction enum that led to this state.
+        game_state: Optional GameState deep copied for exact restore.
 
     Raises:
         ValueError: If grid malformed E002, score negative, move_number negative,
@@ -131,6 +135,7 @@ class HistorySnapshot:
     twist_state: Dict
     move_number: int
     direction: Direction
+    game_state: Optional[Any] = None
 
     def __post_init__(self) -> None:
         """Deep copy grid and twist_state, validate 5x5 shape, Tile heat."""
@@ -178,6 +183,30 @@ class HistorySnapshot:
             raise ValueError(
                 f"direction must be Direction enum, got {type(self.direction)}"
             )
+
+        # Deep copy game_state if present
+        if self.game_state is not None:
+            # Reload-tolerant check: accept if class name matches GameState
+            gs = self.game_state
+            is_gamestate = False
+            if type(gs).__name__ == "GameState" and hasattr(gs, "vent_streak"):
+                is_gamestate = True
+            else:
+                try:
+                    from src.core.gamestate import GameState as GSClass
+
+                    if isinstance(gs, GSClass):
+                        is_gamestate = True
+                except Exception:
+                    pass
+            if not is_gamestate:
+                # Allow None, but if not None and not GameState-like, raise TypeError
+                # For backward compat, if it's not GameState-like, keep as is? Raise for safety
+                # But we allow any object with vent_streak for reload tolerance
+                if not hasattr(gs, "vent_streak"):
+                    raise TypeError(f"game_state must be GameState or None, got {type(gs)}")
+            isolated_gs = copy.deepcopy(gs)
+            object.__setattr__(self, "game_state", isolated_gs)
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +276,12 @@ class HistoryStack:
             deep_copied_snapshot, "twist_state", isolated_twist
         )
 
+        # Ensure game_state isolation if present
+        gs = getattr(deep_copied_snapshot, "game_state", None)
+        if gs is not None:
+            isolated_gs = copy.deepcopy(gs)
+            object.__setattr__(deep_copied_snapshot, "game_state", isolated_gs)
+
         self._stack.append(deep_copied_snapshot)
 
     def undo(self) -> Optional[HistorySnapshot]:
@@ -255,7 +290,7 @@ class HistoryStack:
         Returns:
             Deep copy of last HistorySnapshot, or None if stack empty.
             Exact prior state including grid values heat score twist_state
-            move_number direction.
+            move_number direction and game_state.
         """
         if len(self._stack) == 0:
             return None
@@ -271,6 +306,11 @@ class HistoryStack:
 
         isolated_twist = _deep_copy_twist_state(returned_snapshot.twist_state)
         object.__setattr__(returned_snapshot, "twist_state", isolated_twist)
+
+        gs = getattr(returned_snapshot, "game_state", None)
+        if gs is not None:
+            isolated_gs = copy.deepcopy(gs)
+            object.__setattr__(returned_snapshot, "game_state", isolated_gs)
 
         return returned_snapshot
 
@@ -312,5 +352,10 @@ class HistoryStack:
 
         isolated_twist = _deep_copy_twist_state(peeked_copy.twist_state)
         object.__setattr__(peeked_copy, "twist_state", isolated_twist)
+
+        gs = getattr(peeked_copy, "game_state", None)
+        if gs is not None:
+            isolated_gs = copy.deepcopy(gs)
+            object.__setattr__(peeked_copy, "game_state", isolated_gs)
 
         return peeked_copy

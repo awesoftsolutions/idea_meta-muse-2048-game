@@ -253,11 +253,15 @@ class Direction(Enum):
 class MergeInfo:
     """Single merge event with position, value, source_positions, heat_gen per ADR-010.
 
+    Extended per ADR-017 with source_heats for Q-004 cold_fusion fix:
+    source_heats = (prev.heat, tile.heat) captured during _process_line.
+
     Attributes:
         position: Final (r,c) position of merged tile after reconstruction.
         value: Merged tile value (sum of sources).
         source_positions: List of (r,c) source positions that merged.
         heat_gen: Heat generated floor(log2(V)/2) clamped 0-3.
+        source_heats: Tuple of source heats (prev.heat, tile.heat) for cold_fusion fix.
 
     Raises:
         ValueError: If position invalid or value not power of two (E002).
@@ -267,6 +271,7 @@ class MergeInfo:
     value: int
     source_positions: List[Tuple[int, int]] = field(default_factory=list)
     heat_gen: int = 0
+    source_heats: Tuple[int, int] = (0, 0)
 
     def __post_init__(self) -> None:
         if not _is_power_of_two(self.value):
@@ -281,6 +286,21 @@ class MergeInfo:
         r, c = self.position
         if not (0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE):
             raise ValueError(f"E002 MergeInfo position out of range: {self.position}")
+        # Validate source_heats tuple len 2, clamp 0-3
+        if not isinstance(self.source_heats, (tuple, list)) or len(self.source_heats) != 2:
+            object.__setattr__(self, "source_heats", (0, 0))
+        else:
+            try:
+                h0 = int(self.source_heats[0])
+                h1 = int(self.source_heats[1])
+            except Exception:
+                object.__setattr__(self, "source_heats", (0, 0))
+            else:
+                h0 = max(HEAT_MIN, min(HEAT_MAX, h0))
+                h1 = max(HEAT_MIN, min(HEAT_MAX, h1))
+                object.__setattr__(self, "source_heats", (h0, h1))
+        if self.source_positions is None:
+            object.__setattr__(self, "source_positions", [])
 
 
 # ---------------------------------------------------------------------------
@@ -528,19 +548,26 @@ class Board:
         merges: List[MergeInfo] = []
         score_delta = 0
 
+        # Track source heats parallel to source positions
+        new_line_source_heats: List[Tuple[int, int]] = []
+
         for i, tile in enumerate(compressed_tiles):
             if (
                 new_line_vals
                 and new_line_vals[-1].value == tile.value
                 and not merged_flags[-1]
             ):
-                # Merge possible
+                # Merge possible - capture source heats BEFORE merge per ADR-017
                 prev_tile = new_line_vals[-1]
+                prev_heat = prev_tile.heat
+                curr_heat = tile.heat
+                source_heats_tuple = (prev_heat, curr_heat)
                 new_value = prev_tile.value * 2
-                new_heat = max(prev_tile.heat, tile.heat)
-                new_tile = Tile(value=new_value, heat=new_heat)
-
                 heat_gen = _calc_heat_gen(new_value)
+                # new_heat = max(prev, curr) + heat_gen clamped 0-3 per ADR-017
+                new_heat_with_gen = max(prev_heat, curr_heat) + heat_gen
+                new_heat_with_gen = max(HEAT_MIN, min(HEAT_MAX, new_heat_with_gen))
+                new_tile = Tile(value=new_value, heat=new_heat_with_gen)
 
                 # Replace last tile
                 new_line_vals[-1] = new_tile
@@ -549,23 +576,18 @@ class Board:
                 score_delta += new_value
 
                 # Collect MergeInfo with placeholder position, finalization in reconstruct
-                # source_positions = previous sources + current
                 prev_sources = new_line_source_positions[-1]
                 source_positions = prev_sources + [compressed_positions[i]]
                 new_line_source_positions[-1] = source_positions
+                new_line_source_heats[-1] = source_heats_tuple
 
-                # Temporary position = (0,0) placeholder, will be updated in reconstruct
-                # Store merge index as len(new_line_vals)-1 for later position finalization
                 merge_info = MergeInfo(
                     position=(0, 0),
                     value=new_value,
                     source_positions=source_positions,
                     heat_gen=heat_gen,
+                    source_heats=source_heats_tuple,
                 )
-                # Attach temporary attribute for reconstruct to know index
-                # Use object.__setattr__ to avoid dataclass restrictions? We can store separately.
-                # Instead, we will keep merges in order and reconstruct will assign positions
-                # based on merge order in line.
                 merges.append(merge_info)
             else:
                 # No merge, append copy
@@ -573,6 +595,7 @@ class Board:
                 new_line_vals.append(new_tile)
                 merged_flags.append(False)
                 new_line_source_positions.append([compressed_positions[i]])
+                new_line_source_heats.append((tile.heat, 0))
 
         # Step 3: pad None to BOARD_SIZE (left-aligned)
         new_line: List[Optional[Tile]] = list(new_line_vals)
@@ -653,21 +676,21 @@ class Board:
                     new_grid[r][c] = processed_lines[r][c]
                 # Update merge positions for this row
                 for merge in all_merges:
-                    # Check if merge belongs to this row via _tmp_line_idx
                     line_idx = getattr(merge, "_tmp_line_idx", None)
                     if line_idx is not None and line_idx != r:
                         continue
-                    # If no line_idx attribute, we need to infer: for LEFT, merges are in order
-                    # But we will have set _tmp_line_idx in slide()
                     tmp_idx = getattr(merge, "_tmp_index", 0)
-                    # Final position (r, tmp_idx)
-                    # Create new MergeInfo with final position to avoid mutating placeholder validation
                     final_merge = MergeInfo(
                         position=(r, tmp_idx),
                         value=merge.value,
                         source_positions=merge.source_positions,
                         heat_gen=merge.heat_gen,
+                        source_heats=getattr(merge, "source_heats", (0, 0)),
                     )
+                    # Preserve hack attributes if needed for downstream
+                    object.__setattr__(final_merge, "_tmp_index", tmp_idx)  # type: ignore
+                    if line_idx is not None:
+                        object.__setattr__(final_merge, "_tmp_line_idx", line_idx)  # type: ignore
                     final_merges.append(final_merge)
 
         elif direction == Direction.RIGHT:
@@ -687,7 +710,11 @@ class Board:
                         value=merge.value,
                         source_positions=merge.source_positions,
                         heat_gen=merge.heat_gen,
+                        source_heats=getattr(merge, "source_heats", (0, 0)),
                     )
+                    object.__setattr__(final_merge, "_tmp_index", tmp_idx)  # type: ignore
+                    if line_idx is not None:
+                        object.__setattr__(final_merge, "_tmp_line_idx", line_idx)  # type: ignore
                     final_merges.append(final_merge)
 
         elif direction == Direction.UP:
@@ -705,7 +732,11 @@ class Board:
                         value=merge.value,
                         source_positions=merge.source_positions,
                         heat_gen=merge.heat_gen,
+                        source_heats=getattr(merge, "source_heats", (0, 0)),
                     )
+                    object.__setattr__(final_merge, "_tmp_index", tmp_idx)  # type: ignore
+                    if line_idx is not None:
+                        object.__setattr__(final_merge, "_tmp_line_idx", line_idx)  # type: ignore
                     final_merges.append(final_merge)
 
         elif direction == Direction.DOWN:
@@ -723,7 +754,11 @@ class Board:
                         value=merge.value,
                         source_positions=merge.source_positions,
                         heat_gen=merge.heat_gen,
+                        source_heats=getattr(merge, "source_heats", (0, 0)),
                     )
+                    object.__setattr__(final_merge, "_tmp_index", tmp_idx)  # type: ignore
+                    if line_idx is not None:
+                        object.__setattr__(final_merge, "_tmp_line_idx", line_idx)  # type: ignore
                     final_merges.append(final_merge)
 
         # Detect moved: compare new_grid vs original_grid by value

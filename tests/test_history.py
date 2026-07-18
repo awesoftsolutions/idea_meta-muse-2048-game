@@ -359,3 +359,120 @@ def test_deep_copy_grid_mutation() -> None:
     assert second_peek.grid[0][0].value == 4, f"Expected 4 not {second_peek.grid[0][0].value}"
     assert second_peek.grid[0][0].heat == 1, f"Expected heat 1 not {second_peek.grid[0][0].heat}"
     assert second_peek.twist_state["x"] == 1, "twist_state isolation broken"
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 Sprint 1 — HistorySnapshot game_state exact restore
+# ---------------------------------------------------------------------------
+
+
+def test_history_gamestate_exact_restore() -> None:
+    """AC-11: History snapshot includes GameState, undo restores exact counters."""
+    try:
+        from src.core.gamestate import GameState
+    except ModuleNotFoundError:
+        # Red phase: gamestate module missing, expected failure
+        import src.core.gamestate  # noqa: F401
+
+    from src.core.gamestate import GameState
+
+    grid = create_empty_grid()
+    grid[0][0] = Tile(value=2, heat=0)
+
+    gs = GameState()
+    gs.vent_streak = 2
+    gs.unstable_survival = 1
+    gs.undo_count = 3
+    gs.move_count = 5
+    gs.last_vent_occurred = True
+    gs.last_unstable_present = False
+
+    # Create snapshot with game_state
+    snapshot = HistorySnapshot(
+        grid=grid,
+        score=100,
+        twist_state={"avg": 1.0},
+        move_number=5,
+        direction=Direction.LEFT,
+        game_state=gs,
+    )
+
+    stack = HistoryStack()
+    stack.push(snapshot)
+
+    # Mutate original GameState after push
+    gs.vent_streak = 99
+    gs.unstable_survival = 99
+    gs.undo_count = 99
+
+    # Undo should restore exact original counters
+    restored = stack.undo()
+    assert restored is not None
+    assert hasattr(restored, "game_state"), "HistorySnapshot must have game_state field"
+    assert restored.game_state is not None
+    assert restored.game_state.vent_streak == 2, f"Expected vent_streak 2, got {restored.game_state.vent_streak}"
+    assert restored.game_state.unstable_survival == 1
+    assert restored.game_state.undo_count == 3
+    assert restored.game_state.move_count == 5
+    assert restored.game_state.last_vent_occurred is True
+    assert restored.game_state.last_unstable_present is False
+
+    # Isolation: mutating restored should not affect future peek if we push again
+    restored.game_state.vent_streak = 100
+    # Push again and verify isolation
+    grid2 = create_empty_grid()
+    grid2[1][1] = Tile(value=4, heat=1)
+    gs2 = GameState()
+    gs2.vent_streak = 7
+    snapshot2 = HistorySnapshot(
+        grid=grid2,
+        score=200,
+        twist_state={},
+        move_number=6,
+        direction=Direction.RIGHT,
+        game_state=gs2,
+    )
+    stack.push(snapshot2)
+    peeked = stack.peek()
+    assert peeked is not None
+    assert peeked.game_state is not None
+    assert peeked.game_state.vent_streak == 7
+    # Mutate peeked
+    peeked.game_state.vent_streak = 999
+    peeked2 = stack.peek()
+    assert peeked2 is not None
+    assert peeked2.game_state.vent_streak == 7, "GameState isolation broken in peek"
+
+
+def test_history_gamestate_none_backward_compat() -> None:
+    """Backward compat: HistorySnapshot with game_state None should not crash."""
+    grid = create_empty_grid()
+    grid[0][0] = Tile(value=2, heat=0)
+
+    # Without game_state field (old API) or with None
+    try:
+        snapshot = HistorySnapshot(
+            grid=grid,
+            score=10,
+            twist_state={},
+            move_number=1,
+            direction=Direction.LEFT,
+            game_state=None,
+        )
+    except TypeError:
+        # Old signature without game_state field
+        snapshot = HistorySnapshot(
+            grid=grid,
+            score=10,
+            twist_state={},
+            move_number=1,
+            direction=Direction.LEFT,
+        )
+
+    stack = HistoryStack()
+    stack.push(snapshot)
+    restored = stack.undo()
+    assert restored is not None
+    # game_state may be None for backward compat
+    gs = getattr(restored, "game_state", None)
+    assert gs is None or hasattr(gs, "vent_streak")

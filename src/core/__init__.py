@@ -1,4 +1,4 @@
-"""Core exports facade for headless 5x5 Tile board with rules, score, history, twist, achievements.
+"""Core exports facade for headless 5x5 Tile board with rules, score, history, twist, achievements, gamestate.
 
 Purpose: Re-exports board symbols (Tile, Board, Direction, SlideResult,
     MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid) plus
@@ -6,10 +6,11 @@ Purpose: Re-exports board symbols (Tile, Board, Direction, SlideResult,
     Score, DEFAULT_HIGH_SCORE_PATH), history symbols (HistorySnapshot,
     HistoryStack), twist symbols (apply_heat_generation, spread_heat,
     vent_heat, check_unstable, calculate_cool_merge_bonus,
-    get_turn_pipeline_order), and achievements symbols (Achievements,
-    AchievementDef, GameContext) per Phase 2 Sprint 3 Task 3 final
-    headless green verification. Ensures src/core is importable headlessly
-    without pygame per ADR-015 and E007. 25 exports total.
+    get_turn_pipeline_order), achievements symbols (Achievements,
+    AchievementDef, GameContext), and gamestate symbols (GameState) per
+    Phase 3 Sprint 1 Wave1 GameState ownership Q-005 and Q-004 fix.
+    Ensures src/core is importable headlessly without pygame per ADR-015
+    and E007. 26 exports total including GameState.
 
 System: src/core per Phase 2 architecture.
 
@@ -75,6 +76,7 @@ from .achievements import (
     Achievements,
     GameContext,
 )
+from .gamestate import GameState
 from .twist import (
     apply_heat_generation,
     calculate_cool_merge_bonus,
@@ -110,4 +112,5 @@ __all__ = [
     "Achievements",
     "AchievementDef",
     "GameContext",
+    "GameState",
 ]

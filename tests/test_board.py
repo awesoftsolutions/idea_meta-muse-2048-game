@@ -536,3 +536,122 @@ def test_headless_importable() -> None:
     t = T(value=2, heat=0)
     assert t.value == 2
     assert t.heat == 0
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 Sprint 1 — MergeInfo source_heats extension Q-004
+# ---------------------------------------------------------------------------
+
+
+def test_mergeinfo_source_heats_0_0() -> None:
+    """AC-12: MergeInfo source_heats == (0,0) when merging two heat 0 tiles."""
+    from src.core.board import Board, Direction, Tile, create_empty_grid
+
+    # Create line with two tiles heat 0 same value
+    grid = create_empty_grid()
+    grid[0][0] = Tile(value=2, heat=0)
+    grid[0][1] = Tile(value=2, heat=0)
+    rng = random.Random(42)
+    board = Board(grid=grid, rng=rng)
+    result = board.slide(Direction.LEFT)
+    assert result.moved is True
+    assert len(result.merges) >= 1
+    # Find merge with source_heats (0,0)
+    found = False
+    for m in result.merges:
+        sh = getattr(m, "source_heats", None)
+        assert sh is not None, "MergeInfo must have source_heats field"
+        if sh == (0, 0):
+            found = True
+            break
+    assert found, f"Expected source_heats (0,0) not found, got {[getattr(m,'source_heats',None) for m in result.merges]}"
+
+
+def test_mergeinfo_source_heats_2_0() -> None:
+    """AC-13: source_heats == (2,0) captured correctly."""
+    from src.core.board import Board, Direction, Tile, create_empty_grid
+
+    grid = create_empty_grid()
+    grid[0][0] = Tile(value=2, heat=2)
+    grid[0][1] = Tile(value=2, heat=0)
+    rng = random.Random(42)
+    board = Board(grid=grid, rng=rng)
+    result = board.slide(Direction.LEFT)
+    assert result.moved is True
+    assert len(result.merges) >= 1
+    sh = getattr(result.merges[0], "source_heats", None)
+    assert sh is not None
+    # Order may be (2,0) or (0,2) depending on prev vs curr, but spec says (prev.heat, tile.heat)
+    # prev is first tile in line, tile is second
+    assert sh == (2, 0), f"Expected (2,0) got {sh}"
+
+
+def test_mergeinfo_source_heats_1_1() -> None:
+    """AC-14: source_heats == (1,1) captured correctly."""
+    from src.core.board import Board, Direction, Tile, create_empty_grid
+
+    grid = create_empty_grid()
+    grid[0][0] = Tile(value=4, heat=1)
+    grid[0][1] = Tile(value=4, heat=1)
+    rng = random.Random(42)
+    board = Board(grid=grid, rng=rng)
+    result = board.slide(Direction.LEFT)
+    assert result.moved is True
+    sh = getattr(result.merges[0], "source_heats", None)
+    assert sh == (1, 1), f"Expected (1,1) got {sh}"
+
+
+def test_mergeinfo_source_heats_2_1() -> None:
+    """AC-15: source_heats == (2,1) captured correctly."""
+    from src.core.board import Board, Direction, Tile, create_empty_grid
+
+    grid = create_empty_grid()
+    grid[0][0] = Tile(value=8, heat=2)
+    grid[0][1] = Tile(value=8, heat=1)
+    rng = random.Random(42)
+    board = Board(grid=grid, rng=rng)
+    result = board.slide(Direction.LEFT)
+    assert result.moved is True
+    sh = getattr(result.merges[0], "source_heats", None)
+    assert sh == (2, 1), f"Expected (2,1) got {sh}"
+
+
+def test_process_line_source_heats() -> None:
+    """AC-16: _process_line captures prev.heat and tile.heat before merge, new_heat max+gen clamped."""
+    from src.core.board import Board, Direction, Tile, create_empty_grid
+
+    grid = create_empty_grid()
+    grid[0][0] = Tile(value=4, heat=2)
+    grid[0][1] = Tile(value=4, heat=1)
+    rng = random.Random(42)
+    board = Board(grid=grid, rng=rng)
+    result = board.slide(Direction.LEFT)
+    assert len(result.merges) == 1
+    merge = result.merges[0]
+    assert getattr(merge, "source_heats", None) == (2, 1)
+    # new_heat = max(2,1) + heat_gen(8) = 2 + 1 =3 clamped 0-3
+    # heat_gen for value 8 is floor(log2(8)/2)=1
+    # Check merged tile heat in result grid
+    merged_tile = result.grid[0][0]
+    assert merged_tile is not None
+    # new_heat should be max(prev.heat, curr.heat) + heat_gen clamped
+    # max(2,1)=2 +1=3
+    assert merged_tile.heat == 3, f"Expected new_heat 3, got {merged_tile.heat}"
+
+
+def test_spawn_heat_0_immune_after_source_heats() -> None:
+    """AC-19: spawn heat=0 immune still holds after source_heats extension."""
+    from src.core.board import Board, Direction, Tile, create_empty_grid
+
+    grid = create_empty_grid()
+    grid[0][0] = Tile(value=2, heat=0)
+    rng = random.Random(42)
+    board = Board(grid=grid, rng=rng)
+    result = board.slide(Direction.RIGHT)
+    assert result.moved is True
+    # All tiles heat 0
+    for r in range(BOARD_SIZE):
+        for c in range(BOARD_SIZE):
+            tile = result.grid[r][c]
+            if tile is not None:
+                assert tile.heat == 0, f"Tile at ({r},{c}) heat {tile.heat} !=0 after spawn immunity"

@@ -353,6 +353,18 @@ def _create_achievements_list() -> List[AchievementDef]:
             return False
 
     def condition_cold_fusion(context: GameContext) -> bool:
+        """True only when any merge source_heats == (0,0) per ADR-017 Q-004 fix.
+
+        No false positives for hot merges (2,0)(1,1)(2,1).
+
+        Args:
+            context: GameContext with board, score, history, twist,
+                last_slide_result containing merges with source_heats.
+
+        Returns:
+            True if any merge has source_heats == (0,0), False otherwise
+            including None context, empty merges, or hot merges.
+        """
         if context is None:
             return False
         lsr = getattr(context, "last_slide_result", None)
@@ -368,30 +380,15 @@ def _create_achievements_list() -> List[AchievementDef]:
             return False
         try:
             for merge in merges:
-                src = getattr(merge, "source_positions", None)
-                if src is None:
+                source_heats = getattr(merge, "source_heats", None)
+                if source_heats is None:
                     continue
                 try:
-                    if len(src) < 2:
-                        continue
+                    if isinstance(source_heats, (tuple, list)) and len(source_heats) == 2:
+                        if source_heats[0] == 0 and source_heats[1] == 0:
+                            return True
                 except Exception:
                     continue
-                heat_gen = getattr(merge, "heat_gen", None)
-                # Primary proxy: heat_gen <=1 and source_positions >=2
-                if heat_gen is not None:
-                    try:
-                        if int(heat_gen) <= 1:
-                            # Check board exists
-                            if getattr(context, "board", None) is not None:
-                                return True
-                    except Exception:
-                        pass
-                # Secondary: twist dict flag for testability
-                twist = getattr(context, "twist", None)
-                if isinstance(twist, dict):
-                    flag = twist.get("last_merge_source_heat")
-                    if flag == [0, 0]:
-                        return True
             return False
         except Exception:
             return False

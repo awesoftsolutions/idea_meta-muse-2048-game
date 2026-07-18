@@ -733,3 +733,71 @@ def test_full_board_empty_no_unlock() -> None:
     assert "full_board" not in ids
     assert "heat_wave" not in ids
     assert "128_tile" not in ids
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 Sprint 1 — cold_fusion fix Q-004 source_heats both 0
+# ---------------------------------------------------------------------------
+
+
+def test_cold_fusion_true_0_0() -> None:
+    """AC-17: cold_fusion true only when any merge source_heats == (0,0)."""
+    from src.core.achievements import Achievements
+
+    merge = MergeInfo(
+        position=(0, 0),
+        value=4,
+        source_positions=[(0, 0), (0, 1)],
+        heat_gen=1,
+    )
+    # Inject source_heats attribute for new API
+    object.__setattr__(merge, "source_heats", (0, 0))
+
+    slide_result = make_slide_result(merges=[merge])
+    int_grid = _empty_int_grid()
+    int_grid[0][0] = 4
+    tile_grid = make_tile_grid(int_grid)
+    mgr = Achievements()
+    ctx = make_context(board=tile_grid, last_slide_result=slide_result, move_count=1)
+    newly = mgr.evaluate(ctx)
+    ids = [a.id for a in newly]
+    assert "cold_fusion" in ids, f"Expected cold_fusion unlock for (0,0), got {ids}"
+
+
+def test_cold_fusion_false_hot_merges() -> None:
+    """AC-18: cold_fusion false for hot merges (2,0)(1,1)(2,1) no false positives."""
+    from src.core.achievements import Achievements
+
+    merges = []
+    for heats in [(2, 0), (1, 1), (2, 1)]:
+        m = MergeInfo(
+            position=(0, 0),
+            value=4,
+            source_positions=[(0, 0), (0, 1)],
+            heat_gen=1,
+        )
+        object.__setattr__(m, "source_heats", heats)
+        merges.append(m)
+
+    slide_result = make_slide_result(merges=merges)
+    mgr = Achievements()
+    ctx = make_context(last_slide_result=slide_result, move_count=1)
+    newly = mgr.evaluate(ctx)
+    ids = [a.id for a in newly]
+    assert "cold_fusion" not in ids, f"cold_fusion should NOT unlock for hot merges {[(2,0),(1,1),(2,1)]}, got {ids}"
+
+    # Also test each individually
+    for heats in [(2, 0), (1, 1), (2, 1)]:
+        m = MergeInfo(
+            position=(0, 0),
+            value=4,
+            source_positions=[(0, 0), (0, 1)],
+            heat_gen=1,
+        )
+        object.__setattr__(m, "source_heats", heats)
+        sr = make_slide_result(merges=[m])
+        mgr2 = Achievements()
+        ctx2 = make_context(last_slide_result=sr, move_count=1)
+        newly2 = mgr2.evaluate(ctx2)
+        ids2 = [a.id for a in newly2]
+        assert "cold_fusion" not in ids2, f"False positive for {heats}"

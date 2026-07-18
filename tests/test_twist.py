@@ -401,6 +401,18 @@ def test_spread_empty_grid():
 # ---------------------------------------------------------------------------
 
 
+def _unwrap_vent(result):
+    if isinstance(result, tuple):
+        return result[0]
+    return result
+
+
+def _unwrap_unstable(result):
+    if isinstance(result, tuple):
+        return result[0]
+    return result
+
+
 def test_vent_edge_vs_interior():
     """AC-7: edge heat 2->1, interior 2 stays 2, heat never negative."""
     from src.core.twist import vent_heat
@@ -412,7 +424,7 @@ def test_vent_edge_vs_interior():
             (0, 1): (2, 0),  # edge heat 0
         }
     )
-    new_grid = vent_heat(grid)
+    new_grid = _unwrap_vent(vent_heat(grid))
     assert new_grid[0][0].heat == 1, "edge 2->1"
     assert new_grid[2][2].heat == 2, "interior stays 2"
     assert new_grid[0][1].heat == 0, "heat never negative 0 stays 0"
@@ -431,7 +443,7 @@ def test_vent_all_edge_positions():
 
     mapping = {pos: (2, 2) for pos in edge_positions}
     grid = make_grid_with_tiles(mapping)
-    new_grid = vent_heat(grid)
+    new_grid = _unwrap_vent(vent_heat(grid))
     for pos in edge_positions:
         assert new_grid[pos[0]][pos[1]].heat == 1, f"edge {pos} should vent 2->1"
 
@@ -443,7 +455,7 @@ def test_vent_interior_unchanged():
     interior = [(r, c) for r in range(1, 4) for c in range(1, 4)]
     mapping = {pos: (4, 2) for pos in interior}
     grid = make_grid_with_tiles(mapping)
-    new_grid = vent_heat(grid)
+    new_grid = _unwrap_vent(vent_heat(grid))
     for pos in interior:
         assert new_grid[pos[0]][pos[1]].heat == 2, f"interior {pos} should stay 2"
 
@@ -453,7 +465,7 @@ def test_vent_never_negative():
     from src.core.twist import vent_heat
 
     grid = make_grid_with_tiles({(0, 0): (2, 0), (0, 4): (2, 1), (4, 0): (2, 0)})
-    new_grid = vent_heat(grid)
+    new_grid = _unwrap_vent(vent_heat(grid))
     assert new_grid[0][0].heat == 0
     assert new_grid[0][4].heat == 0  # 1->0
     assert new_grid[4][0].heat == 0
@@ -464,7 +476,7 @@ def test_vent_empty_grid():
     from src.core.twist import vent_heat
 
     grid = make_empty_grid()
-    new_grid = vent_heat(grid)
+    new_grid = _unwrap_vent(vent_heat(grid))
     assert count_tiles(new_grid) == 0
 
 
@@ -488,7 +500,7 @@ def test_unstable_collection():
     from src.core.twist import check_unstable
 
     grid = make_grid_with_tiles({(1, 1): (2, 3), (2, 2): (4, 2), (3, 3): (8, 3)})
-    unstable = check_unstable(grid)
+    unstable = _unwrap_unstable(check_unstable(grid))
     assert (1, 1) in unstable
     assert (3, 3) in unstable
     assert (2, 2) not in unstable
@@ -500,7 +512,7 @@ def test_unstable_empty_board():
     from src.core.twist import check_unstable
 
     grid = make_empty_grid()
-    unstable = check_unstable(grid)
+    unstable = _unwrap_unstable(check_unstable(grid))
     assert unstable == []
 
 
@@ -517,7 +529,7 @@ def test_unstable_all_heat_levels():
             (0, 4): (4, 3),
         }
     )
-    unstable = check_unstable(grid)
+    unstable = _unwrap_unstable(check_unstable(grid))
     assert len(unstable) == 2
     assert (0, 3) in unstable
     assert (0, 4) in unstable
@@ -533,7 +545,7 @@ def test_unstable_mixed_board():
             heat = (r + c) % 4
             mapping[(r, c)] = (2, heat)
     grid = make_grid_with_tiles(mapping)
-    unstable = check_unstable(grid)
+    unstable = _unwrap_unstable(check_unstable(grid))
     expected = [(r, c) for r in range(BOARD_SIZE) for c in range(BOARD_SIZE) if (r + c) % 4 == 3]
     assert set(unstable) == set(expected)
 
@@ -564,7 +576,7 @@ def test_spawn_heat0_immune_via_ordering():
     # If we call vent after spawn (wrong order), heat stays 0 (clamped)
     # But correct order is spawn after vent, so new tile never sees vent same turn
     # We verify by checking that vent does not make heat negative, and ordering is correct
-    new_grid = vent_heat(grid)
+    new_grid = _unwrap_vent(vent_heat(grid))
     assert new_grid[0][0].heat == 0, "new tile at edge heat 0 stays 0 even if vented (clamped), but pipeline ensures it is not vented same turn"
 
     # Additional check: spawn tile is always heat 0 per Board._spawn_tile
@@ -705,12 +717,9 @@ def test_turn_pipeline_ordering_seeded_scenario():
     grid_after_spread = spread_heat(grid_after_gen)
 
     # Phase: vent
-    grid_after_vent = vent_heat(grid_after_spread)
+    grid_after_vent = _unwrap_vent(vent_heat(grid_after_spread))
 
     # Phase: spawn heat 0 (already done in board.slide if moved)
-    # Verify spawned tile heat 0
-    # Find new tile that wasn't in original
-    # For simplicity, check all tiles heat in range
     for r in range(BOARD_SIZE):
         for c in range(BOARD_SIZE):
             tile = grid_after_vent[r][c]
@@ -718,7 +727,7 @@ def test_turn_pipeline_ordering_seeded_scenario():
                 assert 0 <= tile.heat <= 3
 
     # Phase: check_unstable
-    unstable = check_unstable(grid_after_vent)
+    unstable = _unwrap_unstable(check_unstable(grid_after_vent))
     assert isinstance(unstable, list)
     for pos in unstable:
         r, c = pos
@@ -759,11 +768,11 @@ def test_seeded_determinism_same_seed_same_transitions():
     # Apply same pipeline
     g1 = apply_heat_generation(grid1, merges)
     g1 = spread_heat(g1)
-    g1 = vent_heat(g1)
+    g1 = _unwrap_vent(vent_heat(g1))
 
     g2 = apply_heat_generation(grid2, merges)
     g2 = spread_heat(g2)
-    g2 = vent_heat(g2)
+    g2 = _unwrap_vent(vent_heat(g2))
 
     for r in range(BOARD_SIZE):
         for c in range(BOARD_SIZE):
@@ -846,7 +855,7 @@ def test_average_heat_measurement_Q001():
                     # Actually board.slide does not apply twist yet, so we apply here
                     grid_after_gen = apply_heat_generation(result.grid, result.merges)
                     grid_after_spread = spread_heat(grid_after_gen)
-                    grid_after_vent = vent_heat(grid_after_spread)
+                    grid_after_vent = _unwrap_vent(vent_heat(grid_after_spread))
                     test_board.grid = grid_after_vent
                     moves_done += 1
                 attempts += 1
@@ -894,7 +903,7 @@ def test_average_heat_never_exceeds_max():
     # Apply spread and vent many times, average should stay <=3
     for _ in range(10):
         grid = spread_heat(grid)
-        grid = vent_heat(grid)
+        grid = _unwrap_vent(vent_heat(grid))
         avg = average_heat(grid)
         assert avg <= 3.0, f"avg {avg} exceeds max 3"
         assert avg >= 0.0
@@ -944,9 +953,13 @@ def test_heat_clamped_both_directions():
     new_grid = apply_heat_generation(grid, merges)
     assert new_grid[0][0].heat == 3
 
-    # Vent clamped
+    # Vent clamped - handle both old and new API
     grid2 = make_grid_with_tiles({(0, 0): (2, 0)})
-    new_grid2 = vent_heat(grid2)
+    result2 = vent_heat(grid2)
+    if isinstance(result2, tuple):
+        new_grid2 = result2[0]
+    else:
+        new_grid2 = result2
     assert new_grid2[0][0].heat == 0
 
     # Spread clamped
@@ -954,5 +967,62 @@ def test_heat_clamped_both_directions():
     new_grid3 = spread_heat(grid3)
     assert new_grid3[1][1].heat <= 3
     assert new_grid3[1][2].heat <= 3
-    # Use rng to satisfy linter if needed - actually no rng needed
     _ = BOARD_SIZE
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 Sprint 1 — twist extensions vent_occurred and unstable_present
+# ---------------------------------------------------------------------------
+
+
+def test_vent_heat_vent_occurred_true() -> None:
+    """AC-7: vent_heat returns vent_occurred True when edge tile heat reduced."""
+    from src.core.twist import vent_heat
+
+    grid = make_grid_with_tiles({(0, 0): (2, 2), (2, 2): (2, 2)})
+    result = vent_heat(grid)
+    # New API returns tuple (grid, vent_occurred)
+    assert isinstance(result, tuple), f"vent_heat must return tuple (grid, vent_occurred), got {type(result)}"
+    new_grid, vent_occurred = result
+    assert vent_occurred is True, "Expected vent_occurred True when edge heat 2->1"
+    assert new_grid[0][0].heat == 1
+    assert new_grid[2][2].heat == 2, "interior unchanged"
+
+
+def test_vent_heat_vent_occurred_false() -> None:
+    """AC-8: vent_heat returns vent_occurred False when no edge heat reduced."""
+    from src.core.twist import vent_heat
+
+    # Edge tiles heat 0, interior heat 2
+    grid = make_grid_with_tiles({(0, 0): (2, 0), (0, 4): (2, 0), (2, 2): (2, 2)})
+    result = vent_heat(grid)
+    assert isinstance(result, tuple), f"vent_heat must return tuple, got {type(result)}"
+    new_grid, vent_occurred = result
+    assert vent_occurred is False, f"Expected False when edge heat 0, got {vent_occurred}"
+    assert new_grid[0][0].heat == 0
+    assert new_grid[2][2].heat == 2
+
+
+def test_check_unstable_present_true() -> None:
+    """AC-9: check_unstable returns unstable_present True when any heat>=3."""
+    from src.core.twist import check_unstable
+
+    grid = make_grid_with_tiles({(1, 1): (2, 3), (2, 2): (2, 1)})
+    result = check_unstable(grid)
+    assert isinstance(result, tuple), f"check_unstable must return tuple (positions, bool), got {type(result)}"
+    positions, unstable_present = result
+    assert unstable_present is True
+    assert len(positions) > 0
+    assert (1, 1) in positions
+
+
+def test_check_unstable_present_false() -> None:
+    """AC-10: check_unstable returns unstable_present False when all heats <3."""
+    from src.core.twist import check_unstable
+
+    grid = make_grid_with_tiles({(0, 0): (2, 0), (1, 1): (2, 1), (2, 2): (2, 2)})
+    result = check_unstable(grid)
+    assert isinstance(result, tuple), f"check_unstable must return tuple, got {type(result)}"
+    positions, unstable_present = result
+    assert unstable_present is False
+    assert positions == []
