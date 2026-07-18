@@ -44,6 +44,16 @@ Public interface:
     - _is_power_of_two, _calc_heat_gen, _validate_grid, _validate_direction:
       internal helpers
 """
+# CHANGELOG:
+# - Phase 2 Sprint 1: Production board implementation - Tile dataclass with
+#   value (power-of-two >=2) + heat (0-3 clamped), Direction enum UP/DOWN/
+#   LEFT/RIGHT, SlideResult (grid, score_delta, moved, merges), MergeInfo
+#   (position, value, source_positions, heat_gen floor(log2(V)/2) clamped 0-3).
+#   5x5 grid Optional[Tile], slide all 4 directions maximal blocking with
+#   one-merge-per-tile via merged-flag (compress-merge-compress), spawn 90/10
+#   injectable Random (rng.choice/rng.random) heat=0 immune per ADR-009.
+#   Fix duplicate docstring - single module docstring with future import at top.
+# - Phase 1 Sprint 1: Initial board scaffolding.
 
 from __future__ import annotations
 

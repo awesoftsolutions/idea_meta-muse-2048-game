@@ -28,6 +28,14 @@ Public interface:
       _simulate_slide_without_spawn, _grids_differ_by_value, _has_empty,
       _has_merge_possible: internal pure helpers
 """
+# CHANGELOG:
+# - Phase 2 Sprint 1: IRules contract implementation - is_legal_move checks if
+#   slide would change board values ignoring heat (value-only diff), is_game_over
+#   true only when no empty cells and no merge possible in any direction.
+#   Pure functions headless no pygame no spawn no heat phases during legality
+#   simulation, compress-merge-compress with merged-flag. Fix duplicate docstring
+#   - single module docstring with future import at top.
+# - Phase 1 Sprint 1: Initial rules scaffolding.
 
 from __future__ import annotations
 

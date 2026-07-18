@@ -18,6 +18,12 @@ Public interface:
       HEAT_MIN, HEAT_MAX, create_empty_grid re-exported from .board
     - is_legal_move, is_game_over re-exported from .rules
 """
+# CHANGELOG:
+# - Phase 2 Sprint 1: __all__ 11 exports restoration - 9 board symbols (Tile,
+#   Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX,
+#   create_empty_grid) plus 2 rules symbols (is_legal_move, is_game_over).
+#   Ensures src/core importable headlessly without pygame per ADR-015/E007.
+# - Phase 1 Sprint 1: Initial core facade.
 
 from .board import (
     BOARD_SIZE,
