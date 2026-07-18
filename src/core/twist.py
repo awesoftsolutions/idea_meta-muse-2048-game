@@ -58,6 +58,14 @@ Spread orthogonal lower transfer 1 deterministic per ADR-011.
 Vent edge -1 clamped >=0 interior unchanged.
 Unstable threshold >=3.
 """
+# CHANGELOG:
+# - Phase 2 Sprint 2: Thermal Entropy Core — heat generation
+#   floor(log2(V)/2) clamped 0-3 per ADR-010, orthogonal lower spread
+#   transfer 1 two-phase delta per ADR-011, edge venting -1 clamped >=0,
+#   unstable detection >=3, cool-merge bonus for heat 0 sources, locked turn
+#   pipeline slide->gen->spread->vent->spawn heat=0->unstable->achievements
+#   per ADR-009, deterministic pure functions no mutation deep copy via
+#   Tile(value,heat) duck typing, spawn immunity, no pygame.
 
 from __future__ import annotations
 

@@ -25,6 +25,13 @@ Public interface:
     - _deep_copy_grid: helper deep copy grid with Tile(value,heat) manual copy
     - _deep_copy_twist_state: helper deep copy twist_state dict
 """
+# CHANGELOG:
+# - Phase 2 Sprint 2: HistorySnapshot deep copy exact restore — grid
+#   List[List[Optional[Tile]]] deep copy including heat 0-3, score int,
+#   twist_state dict, move_number int, direction Direction, __post_init__
+#   validation 5x5 E002. HistoryStack push deep copy isolation, undo pop
+#   return last or None no-op empty per E004, can_undo len>0, clear, new
+#   move after undo clears redo, deep copy isolation, peek, __len__.
 
 from __future__ import annotations
 
