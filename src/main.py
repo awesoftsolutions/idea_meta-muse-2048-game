@@ -36,6 +36,16 @@ Public Interface:
     reset_game_state(rng, board, score, history, achievements, game_state, effect_manager, toast_manager) -> tuple
     main() -> None
 """
+# CHANGELOG:
+# - Phase 4 Sprint 2 Task 2: WIRED HUD ToastManager GameOverOverlay per ADR-026,
+#   draw_hud_with_gamestate each frame with GameState, ToastManager queue timed
+#   2-3 sec stacking vertical Thermal Entropy treatment, game-over overlay dim
+#   50% alpha #0F172A reactor meltdown/cool-down identity, R restart resetting
+#   Board GameState Score History Achievements EffectManager ToastManager,
+#   screenshot hooks capture_screenshot phase-4-hud-toast-gameover.png valid PNG
+#   header 89 50 4E 47 700x800 manifest update, visual-proof dir creation mkdir
+#   parents True exist_ok True OSError handling, fix bare except to specific
+#   exceptions OSError ValueError per lint.
 
 from __future__ import annotations
 
