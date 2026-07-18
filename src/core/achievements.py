@@ -32,6 +32,15 @@ Public interface:
     - _create_achievements_list: factory creating 12 distinct
 """
 
+# CHANGELOG:
+# Sprint 3 — 12 distinct achievements (first_merge, 128_tile, triple_merge,
+#   cool_operator, meltdown_survivor, undo_master, score_1000, full_board,
+#   heat_wave, cold_fusion, chain_reaction, centurion) with GameContext
+#   aggregating board/score/history/twist/last_slide_result/move_count/
+#   total_merges/vent_streak/unstable_survival/undo_count and Achievements
+#   manager (evaluate, get_all, is_unlocked). Pure Python deterministic,
+#   stdlib only, headless testable per ADR-014/ADR-015.
+
 from __future__ import annotations
 
 from dataclasses import dataclass
