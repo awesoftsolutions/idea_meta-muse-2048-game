@@ -1,21 +1,25 @@
-"""Core exports facade for headless 5x5 Tile board with rules, score, history, twist.
+"""Core exports facade for headless 5x5 Tile board with rules, score, history, twist, achievements.
 
 Purpose: Re-exports board symbols (Tile, Board, Direction, SlideResult,
     MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX, create_empty_grid) plus
     rules symbols (is_legal_move, is_game_over), score symbols (ScoreState,
     Score, DEFAULT_HIGH_SCORE_PATH), history symbols (HistorySnapshot,
-    HistoryStack), and twist symbols (apply_heat_generation, spread_heat,
+    HistoryStack), twist symbols (apply_heat_generation, spread_heat,
     vent_heat, check_unstable, calculate_cool_merge_bonus,
-    get_turn_pipeline_order) per Phase 2 Sprint 2 Task 4 isolation verification.
-    Ensures src/core is importable headlessly without pygame per ADR-015 and E007.
+    get_turn_pipeline_order), and achievements symbols (Achievements,
+    AchievementDef, GameContext) per Phase 2 Sprint 3 Task 3 final
+    headless green verification. Ensures src/core is importable headlessly
+    without pygame per ADR-015 and E007. 25 exports total.
 
 System: src/core per Phase 2 architecture.
 
-Dependencies: .board, .rules, .score, .history, .twist modules (stdlib only, no pygame).
+Dependencies: .board, .rules, .score, .history, .twist, .achievements modules
+    (stdlib only, no pygame).
 
 Used-by: tests/test_isolation_phase2.py, tests/test_isolation_phase2_sprint2.py,
     tests/test_board.py, tests/test_rules.py, tests/test_score.py,
-    tests/test_history.py, tests/test_twist.py, future game loop.
+    tests/test_history.py, tests/test_twist.py, tests/test_achievements.py,
+    future game loop.
 
 Public interface:
     - Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE,
@@ -25,16 +29,20 @@ Public interface:
     - HistorySnapshot, HistoryStack re-exported from .history
     - apply_heat_generation, spread_heat, vent_heat, check_unstable,
       calculate_cool_merge_bonus, get_turn_pipeline_order re-exported from .twist
+    - Achievements, AchievementDef, GameContext re-exported from .achievements
 """
 # CHANGELOG:
-# - Phase 2 Sprint 2 Task 4: __all__ 21 exports restoration - 9 board symbols (Tile,
-#   Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX,
+# - Phase 2 Sprint 3 Task 3: __all__ 25 exports final verification - 9 board symbols
+#   (Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX,
 #   create_empty_grid) plus 2 rules symbols (is_legal_move, is_game_over),
 #   3 score symbols (ScoreState, Score, DEFAULT_HIGH_SCORE_PATH),
 #   2 history symbols (HistorySnapshot, HistoryStack),
 #   6 twist symbols (apply_heat_generation, spread_heat, vent_heat,
-#   check_unstable, calculate_cool_merge_bonus, get_turn_pipeline_order).
+#   check_unstable, calculate_cool_merge_bonus, get_turn_pipeline_order),
+#   3 achievements symbols (Achievements, AchievementDef, GameContext).
 #   Ensures src/core importable headlessly without pygame per ADR-015/E007.
+#   Final verification PASS AC-1 to AC-10 Q-001 avg <2.0 ref 1.803.
+# - Phase 2 Sprint 2 Task 4: __all__ 21 exports restoration.
 # - Phase 2 Sprint 1: __all__ 11 exports restoration - 9 board symbols plus 2 rules.
 # - Phase 1 Sprint 1: Initial core facade.
 
