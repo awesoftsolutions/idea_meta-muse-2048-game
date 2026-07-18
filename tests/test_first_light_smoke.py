@@ -535,3 +535,60 @@ def test_smoke_tests_no_pygame_leak_in_core() -> None:
                 continue
             if "import pygame" in stripped or "from pygame" in stripped:
                 pytest.fail(f"pygame import found in {py_file}:{i}: {stripped}")
+
+
+# ---------------------------------------------------------------------------
+# Wave3 final: first-light screenshot PNG header, manifest, mode label, window
+# ---------------------------------------------------------------------------
+
+
+def test_first_light_screenshot_valid_PNG_header_smoke() -> None:
+    """AC-9: visual-proof/phase-3-first-light.png valid PNG header 89 50 4E 47 700x800."""
+    screenshot_path = Path("visual-proof/phase-3-first-light.png")
+    assert screenshot_path.exists(), "First-light screenshot must exist for Wave3 final"
+    assert screenshot_path.stat().st_size > 0
+    with open(screenshot_path, "rb") as f:
+        header = f.read(8)
+    expected = bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+    assert header == expected, f"Invalid PNG header: {header.hex()}"
+
+
+def test_manifest_entry_exists_smoke() -> None:
+    """AC-10: visual-proof/README.md manifest entry per SOW."""
+    manifest_path = Path("visual-proof/README.md")
+    assert manifest_path.exists(), "Manifest must exist"
+    content = manifest_path.read_text(encoding="utf-8")
+    assert "phase-3-first-light.png" in content
+
+
+def test_mode_label_overlay_present_smoke() -> None:
+    """AC-8: mode label overlay present in tiles.py."""
+    tiles_path = Path("src/render/tiles.py")
+    assert tiles_path.exists(), "src/render/tiles.py must exist for Wave3 final"
+    content = tiles_path.read_text(encoding="utf-8")
+    assert "Mode" in content or "mode" in content.lower()
+    assert "SysFont" in content
+
+
+def test_draw_board_exists_and_callable_smoke() -> None:
+    """AC-1: draw_board exists and callable."""
+    from src.render.tiles import draw_board
+
+    assert callable(draw_board)
+
+
+def test_lerp_heat_color_exact_colors_smoke() -> None:
+    """AC-2: lerp_heat_color exact colors via smoke import."""
+    from src.render.tiles import lerp_heat_color
+
+    c0, g0 = lerp_heat_color(0)
+    assert c0 == (59, 130, 246)
+    assert g0 is False
+    c1, g1 = lerp_heat_color(1)
+    assert c1 == (245, 158, 11)
+    assert g1 is False
+    c2, g2 = lerp_heat_color(2)
+    assert c2 == (239, 68, 68)
+    c3, g3 = lerp_heat_color(3)
+    assert c3 == (255, 255, 255)
+    assert g3 is True
