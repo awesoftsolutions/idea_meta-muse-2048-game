@@ -1,5 +1,4 @@
-"""
-src/render/hud.py — HUD with score, high_score, achievement toasts, reactor chrome identity.
+"""HUD with score, high_score, achievement toasts, reactor chrome identity.
 
 Purpose:
     Implements HUD overlay on 700x800 Favur 2048 window with reactor chrome
@@ -14,20 +13,22 @@ Purpose:
 System:
     RenderHUD per Phase 4 Sprint 2 Task 1. Part of src/render
     subsystem per Phase 4 architecture IHUDRenderer, IToastManager,
-    IGameOverOverlay.
+    IGameOverOverlay. Part of src/render subsystem per Phase 4 architecture.
 
 Dependencies:
-    - pygame-ce (local import for headless fallback, programmatic only
-      rect/circle/alpha SysFont, no external image loading, no font file path)
-    - stdlib: math, random, dataclasses, typing
-    - No src/core imports to preserve headless separation (only Any for
-      game_state/layout duck typing)
+    pygame-ce (local import for headless fallback, programmatic only
+    rect/circle/alpha SysFont, no external image loading, no font file path),
+    stdlib math random dataclasses typing,
+    No src/core imports to preserve headless separation (only Any for
+    game_state/layout duck typing).
 
 Used-by:
-    - src/render/__init__.py exports
-    - src/main.py wiring HUD + toasts + game-over
+    - src/render/__init__.py exports draw_hud, draw_hud_with_gamestate,
+      ToastManager, draw_game_over, Toast
+    - src/main.py wiring HUD + toasts + game-over overlay R restart screenshot hooks
     - tests/test_hud.py 29 unit tests
     - tests/test_hud_smoke.py 7 smoke tests
+    - tests/test_phase_exit_verification.py HUD verification
 
 Public Interface:
     Constants:
@@ -42,47 +43,66 @@ Public Interface:
         WINDOW_W: int = 700, WINDOW_H: int = 800, HUD_H: int = 120
         TOAST_W: int = 280, TOAST_H: int = 60, TOAST_DURATION: float = 2.5
         TOAST_GAP: int = 10, MAX_TOASTS: int = 5
+        WINDOW_WIDTH: int = 700 alias
+        WINDOW_HEIGHT: int = 800 alias
+        TOAST_WIDTH: int = 280 alias
+        TOAST_HEIGHT: int = 60 alias
     Classes:
         Toast dataclass:
-            achievement_id: str, title: str, description: str,
-            elapsed: float=0.0, duration: float=2.5, y_offset: int=0,
-            alpha: int=255, scale: float=1.0, heat_treatment: str="cool",
-            particles: List[Dict[str,Any]]=field(default_factory=list)
-            Methods: __post_init__() -> None
+            Attributes:
+                achievement_id: str, title: str, description: str,
+                elapsed: float=0.0, duration: float=2.5, y_offset: int=0,
+                alpha: int=255, scale: float=1.0, heat_treatment: str="cool",
+                particles: List[Dict[str,Any]]=field(default_factory=list)
+            Methods:
+                __post_init__() -> None
+                    Initializes heat_treatment and particles from achievement_id.
         ToastManager class:
             Attributes: max_toasts: int, toasts: List[Toast]
             Methods:
                 __init__(self, max_toasts: int=5) -> None
+                    Initializes empty toast queue.
                 push(self, achievements: List[Any]) -> None
-                    Raises: ValueError if achievements is None
+                    Pushes achievements as toasts with stacking and pulse.
+                    Args: achievements List of achievement dicts or objects.
+                    Raises: ValueError if achievements is None.
                 update(self, dt: float) -> None
-                    Args: dt: float delta time seconds
-                    Raises: ValueError if dt is None or dt<0
+                    Advances queue timing and animation.
+                    Args: dt delta time seconds.
+                    Raises: ValueError if dt is None or negative.
                 draw(self, surface: Any) -> None
-                    Args: surface: pygame.Surface 700x800 or mock
-                    Raises: ValueError if surface is None
+                    Draws toasts stacking top-right with reactor chrome and particles.
+                    Args: surface pygame surface 700x800 or mock.
+                    Raises: ValueError if surface is None.
                 has_visible(self) -> bool
+                    Checks if any toast visible, True if len>0 and any alpha>0.
     Functions:
         _heat_color_for_treatment(treatment: str) -> Tuple[int,int,int]
+            Maps heat treatment string to RGB color.
         _determine_heat_treatment(achievement_id: str) -> str
-        _create_toast_particles(heat_treatment: str, x: float, y: float)
-            -> List[Dict[str,Any]]
-        _draw_reactor_chrome_panel(surface: Any,
-            rect: Tuple[int,int,int,int], color: Tuple[int,int,int],
-            border_color: Tuple[int,int,int], alpha: int=255) -> None
-            Raises: ValueError if surface is None
-        draw_hud(surface: Any, score: int, high_score: int,
-            game_state: Any, layout: Any) -> None
-            Raises: ValueError if surface is None or game_state is None
-        draw_hud_with_gamestate(surface: Any, score: int, high_score: int,
-            game_state: Any, layout: Any) -> None
-            Raises: ValueError if surface is None or game_state is None
-        draw_game_over(surface: Any, score: int, high_score: int,
-            layout: Any=None) -> None
-            Raises: ValueError if surface is None
-        draw_game_over_stub(surface: Any, score: int, high_score: int,
-            layout: Any=None) -> None
-            Raises: ValueError if surface is None
+            Determines heat treatment from achievement_id substrings.
+        _create_toast_particles(heat_treatment: str, x: float, y: float) -> List[Dict[str,Any]]
+            Creates toast particles per heat identity.
+        _draw_reactor_chrome_panel(surface: Any, rect: Tuple[int,int,int,int], color: Tuple[int,int,int], border_color: Tuple[int,int,int], alpha: int=255) -> None
+            Draws reactor chrome panel with background and border.
+            Raises: ValueError if surface is None.
+        draw_hud(surface: Any, score: int, high_score: int, game_state: Any, layout: Any) -> None
+            Draws HUD area top background #0F172A score current top-left SysFont 36.
+            Args: surface 700x800, score current, high_score persisted, game_state
+            with move_count vent_streak unstable_survival, layout with hud_rect.
+            Raises: ValueError if surface None or game_state None.
+        draw_hud_with_gamestate(surface: Any, score: int, high_score: int, game_state: Any, layout: Any) -> None
+            Wrapper for backward compat, calls draw_hud with same args.
+            Args: surface, score, high_score, game_state, layout.
+            Raises: ValueError if surface None or game_state None.
+        draw_game_over(surface: Any, score: int, high_score: int, layout: Any=None) -> None
+            Draws game-over overlay dim 50% alpha #0F172A 700x800 Game Over centered.
+            Args: surface 700x800, score final, high_score persisted, layout optional.
+            Raises: ValueError if surface None.
+        draw_game_over_stub(surface: Any, score: int, high_score: int, layout: Any=None) -> None
+            Minimal stub for game-over overlay maintaining compat, calls draw_game_over.
+            Args: surface 700x800, score final, high_score, layout optional.
+            Raises: ValueError if surface None.
 """
 # CHANGELOG:
 # - Phase 4 Sprint 1: CREATED ToastManager with Toast dataclass achievement_id
@@ -97,6 +117,8 @@ Public Interface:
 #   implemented draw_game_over full spec dim 50% alpha #0F172A overlay
 #   700x800 Game Over centered SysFont 48 final score high-score restart
 #   prompt Press R to restart, kept draw_game_over_stub compat.
+# - Phase 4 Sprint 3: VERIFIED ToastManager HUD toasts gameover overlay
+#   wiring in main loop screenshot gating, no logic change, changelog compliance.
 
 from __future__ import annotations
 

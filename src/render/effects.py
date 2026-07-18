@@ -1,5 +1,4 @@
-"""
-src/render/effects.py — EffectManager with slide lerp merge pulse heat-aware particles.
+"""EffectManager with slide lerp merge pulse heat-aware particles.
 
 Implements movement/merge feedback per Phase 4 architecture ADR-021, ADR-028:
 - Slide lerp 100-150ms per tile using SlideResult source_positions
@@ -9,13 +8,74 @@ Implements movement/merge feedback per Phase 4 architecture ADR-021, ADR-028:
 - Intensity from heat_gen floor(log2(V)/2) and source_heats
 - Programmatic only rect/circle/alpha no board mutation SysFont only
 
-Public API:
-- Particle dataclass
-- EffectAnimationState dataclass
-- EffectManager class with __init__, start_slide, start_merge, update, draw, is_animating
+Purpose:
+    Manages slide lerp and merge pulse animations with heat-aware particles
+    distinct per heat, programmatic only, no board mutation, pure animation state.
 
-System: RenderEffects per Phase 4 architecture.
-Dependencies: pygame-ce (local import for headless), src.core.board, stdlib math random.
+System:
+    RenderEffects per Phase 4 architecture IEffectManager.
+    Part of src/render subsystem per Phase 4 architecture.
+
+Dependencies:
+    pygame-ce (local import for headless fallback, programmatic only
+    rect/circle/alpha SysFont, no external image loading),
+    stdlib math random dataclasses typing,
+    src.core.board SlideResult MergeInfo for data only no mutation,
+    src.render.tiles blend_colors lerp_heat_color value_to_base_color.
+
+Used-by:
+    - src/render/__init__.py exports EffectManager
+    - src/main.py wiring EffectManager dt-based animation
+    - tests/test_effects_smoke.py smoke tests
+
+Public Interface:
+    Constants:
+        SLIDE_DURATION: float = 0.12 120ms within 100-150ms
+        MERGE_DURATION: float = 0.2 200ms
+        BOARD_ORIGIN_X: int = 100
+        BOARD_ORIGIN_Y: int = 150
+        CELL_SIZE: int = 90
+        CELL_GAP: int = 10
+        HEAT_COLORS: dict[int, Tuple[int,int,int]] 0:#3B82F6 1:#F59E0B 2:#EF4444 3:#FFFFFF
+        PARTICLE_BASE_COUNTS: dict[int, Tuple[int,int]] 0:(2,3) 1:(4,5) 2:(6,8) 3:(10,12)
+    Classes:
+        Particle dataclass:
+            x: float, y: float, vx: float, vy: float, life: float, max_life: float,
+            color: Tuple[int,int,int], size: int, alpha: int, heat: int
+        EffectAnimationState dataclass:
+            tile_value: int, start_pos: Tuple[int,int], end_pos: Tuple[int,int],
+            start_time: float=0.0, duration: float=0.12, progress: float=0.0,
+            is_merge: bool=False, heat: int=0, heat_gen: int=0,
+            source_heats: Tuple[int,int]=(0,0), scale: float=1.0
+        EffectManager class:
+            Attributes: animations: List[EffectAnimationState], particles: List[Particle],
+                slide_duration: float, merge_duration: float
+            Methods:
+                __init__() -> None
+                    Initializes empty animation state no crash no board mutation.
+                start_slide(slide_result: Any) -> None
+                    Captures source->dest per tile for lerp animation 100-150ms.
+                    Args: slide_result SlideResult with merges source_positions.
+                    Raises ValueError if slide_result is None.
+                start_merge(merges: Optional[List[Any]]) -> None
+                    Pulse scaling 1.0->1.2->1.0 200ms and spawns heat-aware particles.
+                    Args: merges List[MergeInfo] each with position value heat_gen source_heats.
+                    Raises ValueError if merges is None.
+                update(dt: float) -> None
+                    Advances animation progress 0-1 lerp and particle life fading alpha.
+                    Args: dt delta time seconds from clock.tick(60)/1000.0.
+                    Raises ValueError if dt is None or negative.
+                draw(surface: Any, layout: Any) -> None
+                    Draws animated tiles at interpolated positions with scaling and particles.
+                    Args: surface pygame surface 700x800 or mock, layout RenderLayout.
+                    Raises ValueError if surface is None.
+                is_animating() -> bool
+                    Returns True if any animation active False when all done.
+    Functions:
+        _clamp_heat(heat: int) -> int
+        _heat_from_source_heats(source_heats: Tuple[int,int]) -> int
+        _cell_center_screen(grid_r: float, grid_c: float, ...) -> Tuple[float,float]
+        _cell_rect_screen(grid_r: float, grid_c: float, ...) -> Tuple[int,int,int,int]
 """
 # CHANGELOG:
 # - Phase 4 Sprint 1: CREATED EffectManager with slide lerp 100-150ms per tile
@@ -24,6 +84,8 @@ Dependencies: pygame-ce (local import for headless), src.core.board, stdlib math
 #   hot #EF4444 6-8 intense spark unstable #FFFFFF 10+ burst, intensity from
 #   heat_gen floor(log2(V)/2) and source_heats, programmatic only rect/circle
 #   alpha no board mutation SysFont only.
+# - Phase 4 Sprint 3: VERIFIED EffectManager slide lerp merge pulse particles
+#   wiring in main loop dt-based animation, no logic change, changelog compliance.
 
 from __future__ import annotations
 

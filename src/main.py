@@ -1,4 +1,4 @@
-"""Production main loop for Favur 2048.
+"""Production main loop for Favur 2048 with screenshot gating and HUD integration.
 
 Implements production main loop per ADR-019 with real 5x5 board,
 GameState ownership per ADR-016, turn pipeline locked per ADR-009,
@@ -21,22 +21,65 @@ Purpose:
 
 System:
     MainLoopProduction per Phase 3/4 architecture ADR-019 ADR-026.
+    Part of src/ subsystem per Phase 4 architecture IMainLoopPhase4,
+    IVisualProofPhase4.
 
 Dependencies:
-    pygame-ce ^2.5.0, stdlib random sys pathlib copy, src.core.*,
-    src.core.rules.is_legal_move is_game_over, src/render/effects.EffectManager,
-    src/render/hud.draw_hud_with_gamestate ToastManager draw_game_over,
-    src/render/tiles.draw_board.
+    pygame-ce ^2.5.0, stdlib random sys pathlib copy typing,
+    src.core.board.Board, Direction, Tile,
+    src.core.gamestate.GameState,
+    src.core.history.HistorySnapshot, HistoryStack,
+    src.core.rules.is_legal_move, is_game_over,
+    src.core.score.ScoreState,
+    src.core.achievements.Achievements, GameContext,
+    src.render.effects.EffectManager,
+    src.render.hud.ToastManager, draw_hud_with_gamestate, draw_game_over,
+    src.render.tiles.draw_board.
+
+Used-by:
+    - python -m src.main entry point
+    - tests/test_phase_exit_verification.py wiring verification
+    - visual-proof gating via capture_screenshot and update_manifest
 
 Public Interface:
     verify_pygame_api() -> bool
-    create_initial_board(rng) -> Board
+        Verifies pygame-ce APIs exist via hasattr, raises ImportError if missing.
+    create_initial_board(rng: random.Random) -> Board
+        Creates Board with single Tile(value=2, heat=0) at random empty cell.
+        Raises TypeError if rng is None.
     ensure_visual_proof_dir() -> bool
-    capture_screenshot(surface, path) -> bool
-    update_manifest(manifest_path, file_name, description, input_sequence, observation_id) -> bool
-    reset_game_state(rng, board, score, history, achievements, game_state, effect_manager, toast_manager) -> Tuple[Board, ScoreState, HistoryStack, Achievements, GameState, Any, Any, bool, bool, bool]
+        Creates visual-proof dir via Path.mkdir(parents=True, exist_ok=True),
+        handles OSError, returns True on success False on OSError.
+    capture_screenshot(surface: pygame.Surface, path: str) -> bool
+        Saves surface via pygame.image.save, verifies PNG header 89 50 4E 47,
+        handles OSError and (ValueError, TypeError, pygame.error).
+        Raises ValueError if surface None or path empty.
+    update_manifest(manifest_path: str, file_name: str, description: str, input_sequence: str, observation_id: str) -> bool
+        Appends manifest entry to README.md per SOW Visual Verification Protocol.
+        Returns True on success False on OSError.
+    reset_game_state(rng: random.Random, board: Board, score: ScoreState, history: HistoryStack, achievements: Achievements, game_state: GameState, effect_manager: Any, toast_manager: Any) -> Tuple[Board, ScoreState, HistoryStack, Achievements, GameState, Any, Any, bool, bool, bool]
+        Resets all state on R restart when is_game_over true, preserves high_score.
     main() -> None
+        Production main loop 700x800 Favur 2048 exact title non-resizable flags=0,
+        Board(rng) single 2 tile heat 0, ScoreState HistoryStack Achievements
+        GameState EffectManager ToastManager layout, event loop QUIT Escape R
+        restart arrow input undo, turn pipeline locked, GameState ownership,
+        frame clock 60 FPS dt=clock.tick(60)/1000.0, draw_board
+        draw_hud_with_gamestate toast_manager.draw draw_game_over when
+        is_game_over, screenshot hooks after animation frame and overlay visible
+        via has_visible and is_game_over, visual-proof dir creation mkdir
+        parents True exist_ok True handle OSError specific except OSError,
+        fix bare except to specific except (ValueError, TypeError, pygame.error),
+        pygame.quit sys.exit. Raises RuntimeError if pygame.init fails,
+        ImportError if pygame-ce API verification fails.
 """
+# CHANGELOG:
+# - Phase 4 Sprint 3: WIRED screenshot gating 3 PNGs phase-4-merge.png
+#   phase-4-toast.png phase-4-gameover.png merge toast gameover dir creation
+#   via ensure_visual_proof_dir mkdir parents True exist_ok True OSError handling
+#   specific except OSError, bare except fix to specific except
+#   (ValueError, TypeError, pygame.error), turn pipeline locked via board.slide()
+#   internal GameState ownership per ADR-016, EffectManager ToastManager wiring.
 
 from __future__ import annotations
 

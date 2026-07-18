@@ -1,5 +1,4 @@
-"""
-src/render/tiles.py — Programmatic tile rendering with heat identity and reactor chrome.
+"""Programmatic tile rendering with heat identity and reactor chrome.
 
 Implements tile rendering per Phase 3 architecture ADR-018, ADR-020 and Phase 4 refinement:
 - Heat identity: #3B82F6 0 -> #F59E0B 1 -> #EF4444 2 -> #FFFFFF 3 glow
@@ -8,15 +7,66 @@ Implements tile rendering per Phase 3 architecture ADR-018, ADR-020 and Phase 4 
 - Programmatic only: pygame.draw.rect with border_radius, font.SysFont, no external assets
 - Unified blend 70% heat 30% base, no debug dot, palette extension beyond 2048
 
-Public API:
-- lerp_heat_color(heat) -> (RGB, glow_bool)
-- value_to_base_color(value) -> RGB
-- blend_colors(base, heat_color, heat_ratio=0.7) -> RGB
-- cell_rect(r,c, ...) -> (x,y,w,h)
-- draw_board(surface, grid, score) -> None
+Purpose:
+    Provides tile rendering with heat identity lerp and reactor chrome,
+    unified blend 70% heat 30% base, programmatic only SysFont, no board mutation.
 
-System: RenderTiles per Phase 3/4 architecture.
-Dependencies: pygame-ce, src.core.board.Tile, stdlib only.
+System:
+    RenderTiles per Phase 3/4 architecture ITilesRefined.
+    Part of src/render subsystem per Phase 4 architecture.
+
+Dependencies:
+    pygame-ce (local import for headless fallback, programmatic only
+    rect/circle with border_radius, SysFont, no external image loading),
+    stdlib math typing, src.core.board.Tile for type hints only.
+
+Used-by:
+    - src/render/__init__.py exports draw_board
+    - src/main.py wiring draw_board each frame
+    - src/render/effects.py blend_colors lerp_heat_color value_to_base_color for animated tiles
+    - tests/test_tiles.py and isolation tests
+
+Public Interface:
+    Constants:
+        WINDOW_WIDTH: int = 700
+        WINDOW_HEIGHT: int = 800
+        BOARD_SIZE_PX: int = 500
+        CELL_GAP: int = 10
+        CELL_SIZE: int = 90
+        BOARD_ORIGIN_X: int = 100
+        BOARD_ORIGIN_Y: int = 150
+        BACKGROUND: Tuple[int,int,int] = (15,23,42) #0F172A
+        BOARD_BG: Tuple[int,int,int] = (30,41,59) #1E293B
+        EMPTY_CELL: Tuple[int,int,int] = (51,65,85) #334155
+        BORDER: Tuple[int,int,int] = (71,85,105) #475569
+        HEAT_0: Tuple[int,int,int] = (59,130,246) #3B82F6
+        HEAT_1: Tuple[int,int,int] = (245,158,11) #F59E0B
+        HEAT_2: Tuple[int,int,int] = (239,68,68) #EF4444
+        HEAT_3: Tuple[int,int,int] = (255,255,255) #FFFFFF
+        VALUE_COLORS: dict[int, Tuple[int,int,int]] classic 2048 palette 2..2048
+        FALLBACK_DARK: Tuple[int,int,int] = (60,60,60)
+    Functions:
+        _is_power_of_two(value: int) -> bool
+            Checks if value is power of two >=2.
+        lerp_heat_color(heat: int) -> Tuple[Tuple[int,int,int], bool]
+            Maps heat level 0-3 to RGB and glow flag per ADR-020.
+            Args: heat clamped 0-3. Returns: (RGB, glow_bool).
+        value_to_base_color(value: int) -> Tuple[int,int,int]
+            Maps tile value to base RGB classic 2048 palette with extension beyond 2048
+            via log2 formula, never returns gray (200,200,200).
+            Args: value Tile value. Returns: RGB tuple.
+        blend_colors(base: Tuple[int,int,int], heat_color: Tuple[int,int,int], heat_ratio: float=0.7) -> Tuple[int,int,int]
+            Blends base and heat colors 70% heat 30% base unified per ADR-025.
+            Args: base, heat_color, heat_ratio default 0.7. Returns: blended RGB.
+        cell_rect(r: int, c: int, board_origin_x: int=100, board_origin_y: int=150, cell_size: int=90, cell_gap: int=10) -> Tuple[int,int,int,int]
+            Calculates cell rectangle for given row/col.
+            Args: r,c 0..4, board_origin_x, board_origin_y, cell_size, cell_gap.
+            Returns: (x,y,w,h). Raises ValueError if r,c out of range E002.
+        draw_board(surface: Any, grid: List[List[Optional[Tile]]], score: int) -> None
+            Draws board with reactor chrome and heat identity unified 70% heat 30% base.
+            Args: surface pygame surface, grid 5x5 Optional[Tile], score current score.
+            Returns: None draws board no mutation. Raises ValueError if surface None,
+            grid not 5x5, Tile value not power of two.
 """
 # CHANGELOG:
 # - Phase 4 Sprint 1 Task 4: FIXED bare except to specific (ValueError, TypeError, pygame.error)
@@ -28,6 +78,9 @@ Dependencies: pygame-ce, src.core.board.Tile, stdlib only.
 # - Phase 3 Sprint 2: VERIFIED final audit heat identity reactor chrome
 #   700x800 programmatic rendering lerp_heat_color blend_colors cell_rect
 #   draw_board production verification.
+# - Phase 4 Sprint 3: VERIFIED unified 70% heat 30% base no debug dot
+#   no gray fallback palette extension, wiring in main loop, no logic change,
+#   changelog compliance.
 
 from __future__ import annotations
 
