@@ -41,7 +41,6 @@ from src.core.history import HistorySnapshot, HistoryStack
 from src.core.rules import is_legal_move
 from src.core.score import ScoreState
 from src.core.achievements import Achievements, GameContext
-from src.core.twist import vent_heat, check_unstable
 
 
 def verify_pygame_api() -> bool:
@@ -60,7 +59,7 @@ def verify_pygame_api() -> bool:
         import pygame as _pg  # noqa: F401 - verify importable
     except ImportError as exc:
         raise ImportError(
-            "pygame-ce not installed, run poetry install"
+            "pygame-ce not installed, run poetry install or pip install pygame-ce ^2.5.0"
         ) from exc
 
     required = [
@@ -254,7 +253,7 @@ def main() -> None:
                         direction = Direction.RIGHT
 
                     if direction is not None:
-                        if not is_legal_move(board.grid, direction):
+                        if not is_legal_move(direction, board.grid):
                             continue
                         snapshot = HistorySnapshot(
                             grid=copy.deepcopy(board.grid),
@@ -266,24 +265,13 @@ def main() -> None:
                         )
                         history.push(snapshot)
                         slide_result = board.slide(direction, rng=rng)
+                        if not slide_result.moved:
+                            continue
                         score.add(slide_result.score_delta)
-                        try:
-                            vent_result = vent_heat(board.grid)
-                            if isinstance(vent_result, tuple):
-                                _, vent_occurred = vent_result
-                            else:
-                                vent_occurred = False
-                        except Exception:
-                            vent_occurred = False
-
-                        try:
-                            unstable_result = check_unstable(board.grid)
-                            if isinstance(unstable_result, tuple):
-                                _, unstable_present = unstable_result
-                            else:
-                                unstable_present = len(unstable_result) > 0
-                        except Exception:
-                            unstable_present = False
+                        # Use vent_occurred and unstable_present from slide_result
+                        # which already implements pipeline locked slide->gen->spread->vent->spawn->unstable
+                        vent_occurred = bool(getattr(slide_result, "vent_occurred", False))
+                        unstable_present = bool(getattr(slide_result, "unstable_present", False))
 
                         game_state.update_after_turn(vent_occurred, unstable_present)
 

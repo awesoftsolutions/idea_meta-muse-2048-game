@@ -317,6 +317,10 @@ class SlideResult:
         score_delta: Sum of merged values.
         moved: Whether any tile moved or merged.
         merges: List of MergeInfo events with heat_gen.
+        vent_occurred: Whether any edge tile vented this turn.
+        unstable_present: Whether any tile heat>=3 present after turn.
+        unstable_positions: List of unstable positions.
+        heat_state: Optional dict with heat pipeline state.
 
     Raises:
         ValueError: If grid not 5x5 or score_delta negative (E002).
@@ -326,6 +330,10 @@ class SlideResult:
     score_delta: int
     moved: bool
     merges: List[MergeInfo] = field(default_factory=list)
+    vent_occurred: bool = False
+    unstable_present: bool = False
+    unstable_positions: List[Tuple[int, int]] = field(default_factory=list)
+    heat_state: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         _validate_grid(self.grid)
@@ -335,6 +343,14 @@ class SlideResult:
             raise ValueError("E002 SlideResult moved must be bool")
         if not isinstance(self.merges, list):
             raise ValueError("E002 SlideResult merges must be list")
+        if not isinstance(self.vent_occurred, bool):
+            object.__setattr__(self, "vent_occurred", bool(self.vent_occurred))
+        if not isinstance(self.unstable_present, bool):
+            object.__setattr__(self, "unstable_present", bool(self.unstable_present))
+        if self.unstable_positions is None:
+            object.__setattr__(self, "unstable_positions", [])
+        if self.heat_state is None:
+            object.__setattr__(self, "heat_state", {})
 
 
 # ---------------------------------------------------------------------------
@@ -851,14 +867,18 @@ class Board:
         return chosen
 
     def slide(self, direction, rng: Optional[random.Random] = None) -> SlideResult:
-        """Slide tiles in direction, return SlideResult with spawn if moved.
+        """Slide tiles in direction, return SlideResult with full pipeline locked.
+
+        Pipeline locked per ADR-009: slide->gen->spread->vent->spawn heat=0->unstable.
+        New tiles heat=0 immune same turn because spawn after spread/vent.
 
         Args:
             direction: Direction enum or string UP/DOWN/LEFT/RIGHT.
             rng: Optional Random for spawn, uses self.rng if None.
 
         Returns:
-            SlideResult with grid, score_delta, moved, merges.
+            SlideResult with grid, score_delta, moved, merges, vent_occurred,
+            unstable_present, unstable_positions.
 
         Raises:
             ValueError: If direction invalid (E001).
@@ -881,36 +901,129 @@ class Board:
         new_grid = reconstructed[0]
         moved = reconstructed[2]
         final_merges = reconstructed[3]
-        # IBoardSlide contract: spawn only if moved — includes merges per real 2048 logic.
-        # Fixed HIGH-001: previously `if moved and total_score==0` spawned only on pure moves,
-        # violating contract. Correct behavior per ADR-009 pipeline: spawn after heat phases,
-        # new tile heat=0 immune, using effective_rng (rng param else self.rng) via _spawn_tile
-        # which uses rng.choice empty cell and rng.random()<0.9 for 90/10 2/4 distribution.
-        if moved:
-            use_rng = rng if rng is not None else self.rng
-            empty_cells = self._get_empty_cells(new_grid)
-            if empty_cells:
-                new_grid = self._spawn_tile(new_grid, use_rng)
+
+        vent_occurred = False
+        unstable_present = False
+        unstable_positions: List[Tuple[int, int]] = []
+
+        if not moved:
+            # No move: return early with defaults, no heat phases, no spawn
+            result_grid: Grid = []
+            for r in range(BOARD_SIZE):
+                row: List[Optional[Tile]] = []
+                for c in range(BOARD_SIZE):
+                    cell = new_grid[r][c]
+                    if cell is None:
+                        row.append(None)
+                    else:
+                        row.append(Tile(value=cell.value, heat=cell.heat))
+                result_grid.append(row)
+            # Update self.grid to reconstructed (unchanged) for consistency
+            self.grid = []
+            for r in range(BOARD_SIZE):
+                row: List[Optional[Tile]] = []
+                for c in range(BOARD_SIZE):
+                    cell = new_grid[r][c]
+                    if cell is None:
+                        row.append(None)
+                    else:
+                        row.append(Tile(value=cell.value, heat=cell.heat))
+                self.grid.append(row)
+            return SlideResult(
+                grid=result_grid,
+                score_delta=total_score,
+                moved=False,
+                merges=final_merges,
+                vent_occurred=False,
+                unstable_present=False,
+                unstable_positions=[],
+                heat_state={},
+            )
+
+        # Pipeline locked: gen already done in _process_line (max+gen), then spread -> vent -> spawn -> unstable
+        # Local import to avoid circular (twist avoids top-level board import)
+        from src.core.twist import (  # noqa: WPS433 - local import intentional per ADR-011
+            check_unstable,
+            spread_heat,
+            vent_heat,
+        )
+
+        # gen already applied in _process_line as max(prev,curr)+heat_gen clamped
+        # So we start from new_grid directly for spread
+        grid_after_gen = new_grid
+
+        # spread: orthogonal lower transfer 1
+        try:
+            grid_after_spread = spread_heat(grid_after_gen)
+        except Exception:
+            grid_after_spread = grid_after_gen
+
+        # vent: edge -1, returns (grid, vent_occurred)
+        try:
+            vent_result = vent_heat(grid_after_spread)
+            if isinstance(vent_result, tuple) and len(vent_result) == 2:
+                grid_after_vent, vent_occurred = vent_result
+            else:
+                grid_after_vent = vent_result  # type: ignore
+                vent_occurred = False
+        except Exception:
+            grid_after_vent = grid_after_spread
+            vent_occurred = False
+
+        # spawn heat=0 after spread/vent for immunity
+        use_rng = rng if rng is not None else self.rng
+        empty_cells = self._get_empty_cells(grid_after_vent)
+        if empty_cells:
+            grid_after_spawn = self._spawn_tile(grid_after_vent, use_rng)
+        else:
+            grid_after_spawn = grid_after_vent
+
+        # unstable: check heat>=3
+        try:
+            unstable_result = check_unstable(grid_after_spawn)
+            if isinstance(unstable_result, tuple) and len(unstable_result) == 2:
+                unstable_positions, unstable_present = unstable_result
+            else:
+                unstable_positions = unstable_result  # type: ignore
+                unstable_present = len(unstable_positions) > 0
+        except Exception:
+            unstable_positions = []
+            unstable_present = False
+
         # Update self.grid deep copy
         self.grid = []
         for r in range(BOARD_SIZE):
             row: List[Optional[Tile]] = []
             for c in range(BOARD_SIZE):
-                cell = new_grid[r][c]
+                cell = grid_after_spawn[r][c]
                 if cell is None:
                     row.append(None)
                 else:
                     row.append(Tile(value=cell.value, heat=cell.heat))
             self.grid.append(row)
-        # Deep copy for SlideResult to prevent mutation leak
-        result_grid: Grid = []
+
+        # Deep copy for SlideResult
+        result_grid = []
         for r in range(BOARD_SIZE):
             row: List[Optional[Tile]] = []
             for c in range(BOARD_SIZE):
-                cell = new_grid[r][c]
+                cell = grid_after_spawn[r][c]
                 if cell is None:
                     row.append(None)
                 else:
                     row.append(Tile(value=cell.value, heat=cell.heat))
             result_grid.append(row)
-        return SlideResult(grid=result_grid, score_delta=total_score, moved=moved, merges=final_merges)
+
+        return SlideResult(
+            grid=result_grid,
+            score_delta=total_score,
+            moved=moved,
+            merges=final_merges,
+            vent_occurred=bool(vent_occurred),
+            unstable_present=bool(unstable_present),
+            unstable_positions=list(unstable_positions),
+            heat_state={
+                "vent_occurred": bool(vent_occurred),
+                "unstable_present": bool(unstable_present),
+            },
+        )

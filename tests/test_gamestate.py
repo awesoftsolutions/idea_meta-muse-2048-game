@@ -174,3 +174,133 @@ def test_no_pygame_import() -> None:
     import src.core.gamestate  # noqa: F401
 
     assert "pygame" not in sys.modules, "pygame leaked via gamestate import"
+
+
+# ---------------------------------------------------------------------------
+# Wave2 comprehensive: consecutive 5, definitions locked per ADR-016
+# ---------------------------------------------------------------------------
+
+
+def test_vent_streak_increments_consecutive_5() -> None:
+    """AC-10: vent_streak increments 1,2,3,4,5 consecutive and move_count 5."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    for i in range(1, 6):
+        gs.update_after_turn(vent_occurred=True, unstable_present=False)
+        assert gs.vent_streak == i, f"Expected {i}, got {gs.vent_streak}"
+        assert gs.last_vent_occurred is True
+    assert gs.move_count == 5
+
+
+def test_vent_streak_resets_on_false() -> None:
+    """AC-10: vent_streak resets on False."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    gs.vent_streak = 3
+    gs.update_after_turn(vent_occurred=False, unstable_present=False)
+    assert gs.vent_streak == 0
+    assert gs.last_vent_occurred is False
+
+
+def test_unstable_survival_increments_wave2() -> None:
+    """AC-11: unstable_survival increments on True (Wave2 explicit)."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    gs.update_after_turn(vent_occurred=False, unstable_present=True)
+    assert gs.unstable_survival == 1
+    gs.update_after_turn(vent_occurred=False, unstable_present=True)
+    assert gs.unstable_survival == 2
+    gs.update_after_turn(vent_occurred=False, unstable_present=True)
+    assert gs.unstable_survival == 3
+    assert gs.last_unstable_present is True
+
+
+def test_unstable_survival_resets_wave2() -> None:
+    """AC-11: unstable_survival resets on False (Wave2 explicit)."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    gs.unstable_survival = 2
+    gs.update_after_turn(vent_occurred=False, unstable_present=False)
+    assert gs.unstable_survival == 0
+    assert gs.last_unstable_present is False
+
+
+def test_undo_count_increments_total_invocations() -> None:
+    """AC-12: undo_count increments total invocations ever."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    gs.increment_undo()
+    assert gs.undo_count == 1
+    gs.increment_undo()
+    assert gs.undo_count == 2
+    gs.update_after_turn(vent_occurred=False, unstable_present=False)
+    assert gs.undo_count == 2, "undo_count should not reset on update_after_turn"
+
+
+def test_move_count_increments_explicit() -> None:
+    """move_count increments on each update_after_turn."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    assert gs.move_count == 0
+    gs.update_after_turn(vent_occurred=False, unstable_present=False)
+    assert gs.move_count == 1
+    gs.update_after_turn(vent_occurred=True, unstable_present=True)
+    assert gs.move_count == 2
+
+
+def test_reset_on_new_game_explicit() -> None:
+    """reset_on_new_game resets all to 0/False."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    gs.update_after_turn(vent_occurred=True, unstable_present=True)
+    gs.update_after_turn(vent_occurred=True, unstable_present=True)
+    gs.increment_undo()
+    gs.increment_undo()
+    gs.reset_on_new_game()
+    assert gs.vent_streak == 0
+    assert gs.unstable_survival == 0
+    assert gs.undo_count == 0
+    assert gs.move_count == 0
+    assert gs.last_vent_occurred is False
+    assert gs.last_unstable_present is False
+
+
+def test_definitions_locked_per_adr_016() -> None:
+    """ADR-016 definitions locked: vent_streak any edge vented, unstable_survival survived with unstable present, undo_count total invocations."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    # vent_streak = consecutive moves where any edge tile vented (vent_occurred True)
+    gs.update_after_turn(vent_occurred=True, unstable_present=False)
+    assert gs.vent_streak == 1
+    # unstable_survival = consecutive moves survived with unstable >=3 present
+    gs2 = GameState()
+    gs2.update_after_turn(vent_occurred=False, unstable_present=True)
+    assert gs2.unstable_survival == 1
+    # undo_count = total undo invocations ever
+    gs3 = GameState()
+    gs3.increment_undo()
+    gs3.increment_undo()
+    assert gs3.undo_count == 2
+    gs3.update_after_turn(vent_occurred=False, unstable_present=False)
+    assert gs3.undo_count == 2, "undo_count total invocations ever not reset unless explicit"
+
+
+def test_gamestate_creation_defaults_explicit() -> None:
+    """AC-9: GameState creation defaults 0/False."""
+    from src.core.gamestate import GameState
+
+    gs = GameState()
+    assert gs.vent_streak == 0
+    assert gs.unstable_survival == 0
+    assert gs.undo_count == 0
+    assert gs.move_count == 0
+    assert gs.last_vent_occurred is False
+    assert gs.last_unstable_present is False

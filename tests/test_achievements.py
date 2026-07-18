@@ -801,3 +801,65 @@ def test_cold_fusion_false_hot_merges() -> None:
         newly2 = mgr2.evaluate(ctx2)
         ids2 = [a.id for a in newly2]
         assert "cold_fusion" not in ids2, f"False positive for {heats}"
+
+
+def test_cold_fusion_true_among_hot() -> None:
+    """cold_fusion true when (0,0) present among hot merges."""
+    from src.core.achievements import Achievements
+
+    merges = []
+    for heats in [(2, 0), (0, 0), (1, 1)]:
+        m = MergeInfo(
+            position=(0, 0),
+            value=4,
+            source_positions=[(0, 0), (0, 1)],
+            heat_gen=1,
+        )
+        object.__setattr__(m, "source_heats", heats)
+        merges.append(m)
+
+    slide_result = make_slide_result(merges=merges)
+    mgr = Achievements()
+    ctx = make_context(last_slide_result=slide_result, move_count=1)
+    newly = mgr.evaluate(ctx)
+    ids = [a.id for a in newly]
+    assert "cold_fusion" in ids, f"Expected cold_fusion unlock when (0,0) among hot, got {ids}"
+
+
+def test_cold_fusion_false_2_0() -> None:
+    """cold_fusion false for (2,0) only."""
+    from src.core.achievements import Achievements
+
+    m = MergeInfo(position=(0, 0), value=4, source_positions=[(0, 0), (0, 1)], heat_gen=1)
+    object.__setattr__(m, "source_heats", (2, 0))
+    sr = make_slide_result(merges=[m])
+    mgr = Achievements()
+    ctx = make_context(last_slide_result=sr, move_count=1)
+    newly = mgr.evaluate(ctx)
+    assert "cold_fusion" not in [a.id for a in newly]
+
+
+def test_cold_fusion_false_1_1() -> None:
+    """cold_fusion false for (1,1) only."""
+    from src.core.achievements import Achievements
+
+    m = MergeInfo(position=(0, 0), value=4, source_positions=[(0, 0), (0, 1)], heat_gen=1)
+    object.__setattr__(m, "source_heats", (1, 1))
+    sr = make_slide_result(merges=[m])
+    mgr = Achievements()
+    ctx = make_context(last_slide_result=sr, move_count=1)
+    newly = mgr.evaluate(ctx)
+    assert "cold_fusion" not in [a.id for a in newly]
+
+
+def test_cold_fusion_false_2_1() -> None:
+    """cold_fusion false for (2,1) only."""
+    from src.core.achievements import Achievements
+
+    m = MergeInfo(position=(0, 0), value=4, source_positions=[(0, 0), (0, 1)], heat_gen=1)
+    object.__setattr__(m, "source_heats", (2, 1))
+    sr = make_slide_result(merges=[m])
+    mgr = Achievements()
+    ctx = make_context(last_slide_result=sr, move_count=1)
+    newly = mgr.evaluate(ctx)
+    assert "cold_fusion" not in [a.id for a in newly]

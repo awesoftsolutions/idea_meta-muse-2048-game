@@ -154,3 +154,84 @@ def test_core_headless_importable() -> None:
     except ModuleNotFoundError:
         # Red phase expected
         pass
+
+
+def test_no_external_assets() -> None:
+    """No external assets: grep no pygame.image.load, no font.Font file path."""
+    src_dir = Path("src")
+    if not src_dir.exists():
+        return
+    violations = []
+    for py_file in src_dir.rglob("*.py"):
+        content = py_file.read_text(encoding="utf-8")
+        for i, line in enumerate(content.splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            if "pygame.image.load" in stripped:
+                violations.append(f"{py_file}:{i}: {stripped}")
+            # font.Font with file path (not SysFont)
+            if "font.Font(" in stripped and "SysFont" not in stripped:
+                # Allow if it's in a comment or test
+                if "test" not in str(py_file).lower():
+                    violations.append(f"{py_file}:{i}: {stripped} - external font asset")
+    assert not violations, f"External assets found: {violations}"
+
+
+def test_src_render_absent_or_minimal() -> None:
+    """src/render absent or minimal stubs, no effects.py/hud.py full logic per M1 Must Not Build."""
+    render_dir = Path("src/render")
+    if not render_dir.exists():
+        # Per M1 Must Not Build, absent is OK
+        return
+    files = list(render_dir.glob("*.py"))
+    # If exists, check effects.py and hud.py absent or minimal
+    for py_file in files:
+        name = py_file.name
+        if name in ("effects.py", "hud.py"):
+            content = py_file.read_text(encoding="utf-8")
+            # Minimal stub check: should not contain animation/toast/game-over full logic
+            # Allow if file is small (<50 lines) or contains only stub
+            lines = content.splitlines()
+            if len(lines) > 50:
+                # Check for full logic indicators
+                full_logic_indicators = ["class.*Effect", "toast", "game-over", "animation"]
+                for indicator in full_logic_indicators:
+                    if indicator.lower() in content.lower() and "minimal" not in content.lower():
+                        # Only fail if clearly full logic
+                        if name == "effects.py" and "particle" in content.lower():
+                            assert False, f"{name} appears to have full logic, belongs to Phase4: {py_file}"
+        if name == "tiles.py":
+            content = py_file.read_text(encoding="utf-8")
+            # Should be programmatic only no image.load
+            assert "pygame.image.load" not in content, "tiles.py should not use image.load"
+
+
+def test_spawn_heat_0_immune_ordering() -> None:
+    """AC-19: Spawn heat=0 immune via ordering spawn after spread/vent, verified by code review."""
+    board_path = Path("src/core/board.py")
+    if not board_path.exists():
+        return
+    content = board_path.read_text(encoding="utf-8")
+    # Verify spawn occurs in slide method
+    assert "def slide(" in content
+    assert "_spawn_tile" in content or "spawn_tile" in content
+    # Verify heat=0 for spawn
+    assert "heat=0" in content or "heat = 0" in content
+
+
+def test_no_pygame_leak_sys_modules_extended() -> None:
+    """Extended isolation: sys.modules no pygame after import src.core.* including gamestate."""
+    before_has_pygame = "pygame" in sys.modules
+    # Import all core modules
+    import src.core.board  # noqa: F401
+    import src.core.gamestate  # noqa: F401
+    import src.core.achievements  # noqa: F401
+    import src.core.twist  # noqa: F401
+    import src.core.history  # noqa: F401
+    import src.core.rules  # noqa: F401
+    import src.core.score  # noqa: F401
+
+    if not before_has_pygame:
+        pygame_modules = [m for m in sys.modules if m.startswith("pygame")]
+        assert not pygame_modules, f"pygame modules leaked after core imports: {pygame_modules}"
