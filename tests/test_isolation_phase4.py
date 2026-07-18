@@ -53,6 +53,9 @@ RENDER_FILES = [
 BARE_EXCEPT_FILES = [
     "src/main.py",
     "src/core/board.py",
+    "src/render/tiles.py",
+    "src/render/effects.py",
+    "src/render/hud.py",
 ]
 
 # Exact patterns per pseudocode ADR-2 and ADR-4
@@ -462,6 +465,12 @@ def test_visual_proof_png_valid() -> None:
     except OSError as exc:
         pytest.fail(f"Failed to stat PNG file: {exc}")
     assert size > 0, "PNG file size 0, expected >0"
+    # Per pseudocode: allow >=10000, expected 16759 per kickoff (Task2 had 10789)
+    assert size >= 10000, f"PNG size {size} <10000, expected >=10000 (16759 per kickoff, 10789 Task2)"
+    # Log expected size handling
+    if size != 16759:
+        # Accept >=10000 but note expected 16759
+        assert size >= 10000
 
     try:
         data = png_path.read_bytes()
@@ -479,20 +488,23 @@ def test_visual_proof_png_valid() -> None:
 
     # Check first 4 bytes hex 89 50 4E 47
     assert data[:4] == b"\x89PNG", f"PNG header first 4 bytes not 89 50 4E 47: {data[:4].hex()}"
+    # Also verify hex string representation
+    assert data[:4].hex() == "89504e47", f"PNG first 4 bytes hex not 89 50 4E 47: {data[:4].hex()}"
 
-    # Optionally parse IHDR chunk for dimensions 700x800 via struct
-    # PNG structure: 8 byte header, then chunks: 4 byte length, 4 byte type, data, 4 byte CRC
-    # IHDR is first chunk, 13 bytes data: width 4 bytes BE, height 4 bytes BE
+    # Parse IHDR chunk for dimensions 700x800 via struct unpack >II at offset 16:24
     try:
         if len(data) >= 24:
-            # After 8 byte header, next 4 bytes = IHDR length (should be 13), next 4 = type
             ihdr_length = struct.unpack(">I", data[8:12])[0]
             ihdr_type = data[12:16]
             if ihdr_type == b"IHDR" and ihdr_length == 13 and len(data) >= 24:
-                width = struct.unpack(">I", data[16:20])[0]
-                height = struct.unpack(">I", data[20:24])[0]
+                width, height = struct.unpack(">II", data[16:24])
                 assert width == 700, f"PNG width expected 700, got {width}"
                 assert height == 800, f"PNG height expected 800, got {height}"
+            else:
+                # Fallback direct unpack at 16:24 per pseudocode
+                width, height = struct.unpack(">II", data[16:24])
+                assert width == 700, f"PNG width expected 700 (fallback), got {width}"
+                assert height == 800, f"PNG height expected 800 (fallback), got {height}"
     except (struct.error, IndexError) as exc:
         pytest.fail(f"Failed to parse PNG IHDR dimensions: {exc}")
 
