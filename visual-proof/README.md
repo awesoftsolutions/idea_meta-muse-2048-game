@@ -70,6 +70,57 @@
 - **screenshot:** screenshot captured via pygame.image.save after HUD toast game-over visible to visual-proof/phase-4-hud-toast-gameover.png valid PNG 700x800 header 89 50 4E 47
 - **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-4-hud-toast-gameover.png observation_id obs_000008
 
+### phase-4-merge.png
+
+- file: phase-4-merge.png, shows: merge with movement/merge feedback particles scaling heat glow #3B82F6 -> #F59E0B -> #EF4444 -> #FFFFFF reactor chrome #0F172A #1E293B #334155 #475569 pulse 1.0->1.2->1.0, input: arrow key causing merge, observation_id: obs_000009
+- **filename:** phase-4-merge.png
+- **path:** visual-proof/phase-4-merge.png
+- **description:** 700x800 Favur 2048 window merge feedback with particles scaling heat glow reactor chrome, movement/merge feedback particles scaling heat glow #3B82F6 -> #F59E0B -> #EF4444 -> #FFFFFF, pulse 1.0->1.2->1.0, reactor chrome #0F172A #1E293B #334155 #475569
+- **what it shows:** merge with movement/merge feedback particles scaling heat glow #3B82F6 -> #F59E0B -> #EF4444 -> #FFFFFF reactor chrome - 700x800 window Favur 2048, reactor chrome colors, merge feedback with particles heat glow, scaling 1.2 pulse, heat identity
+- **input_sequence:** arrow key causing merge - left/right/up/down causing two 2 tiles to merge into 4 with EffectManager slide lerp 100-150ms merge pulse 1.0->1.2->1.0 particles distinct per heat
+- **input:** arrow key causing merge
+- **observation_id:** obs_000009
+- **observation:** obs_000009 captured via window_observe from win_000008 grid_enabled=true 12x8 grid overlay client bounds 700x800 window title Favur 2048 merge feedback particles scaling heat glow #3B82F6 -> #F59E0B -> #EF4444 -> #FFFFFF reactor chrome, plus headless pygame Surface 700x800 valid PNG header 89 50 4E 47 size 16571 bytes dimensions 700x800 exact via pygame.image.save
+- **validation:** PNG header 89 50 4E 47 valid size 16571 bytes dimensions 700x800 exact header bytes 89 50 4E 47 0D 0A 1A 0A valid, IHDR width 700 height 800 via struct.unpack >I offset 16-20, visual inspection confirms reactor chrome background board background empty cells merge feedback with particles heat glow #3B82F6 -> #F59E0B -> #EF4444 -> #FFFFFF scaling 1.2 pulse
+- **phase:** phase 4 sprint 3 task 2
+- **visual-proof:** visual-proof/phase-4-merge.png
+- **screenshot:** screenshot captured via window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-4-merge.png plus pygame.image.save headless 700x800
+- **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe action=screenshot grid_enabled=true output_path=visual-proof/phase-4-merge.png observation_id obs_000009
+
+### phase-4-toast.png
+
+- file: phase-4-toast.png, shows: achievement toast with Thermal Entropy identity cold_fusion blue heat amber/red unstable white pulse reactor containment chrome border #475569 HUD score/high-score, input: achievement unlock, observation_id: obs_000010
+- **filename:** phase-4-toast.png
+- **path:** visual-proof/phase-4-toast.png
+- **description:** 700x800 Favur 2048 window achievement toast Thermal Entropy identity cold_fusion blue #3B82F6 chrome border #475569 HUD score/high-score reactor chrome #0F172A #1E293B, toast stacking vertical Thermal Entropy treatment
+- **what it shows:** achievement toast with Thermal Entropy identity cold_fusion blue heat amber/red unstable white pulse reactor containment chrome border - HUD with score/high-score reactor chrome achievement toast Thermal Entropy identity
+- **input_sequence:** achievement unlock - arrow keys causing merge and achievement unlock Thermal Entropy cold_fusion
+- **input:** achievement unlock
+- **observation_id:** obs_000010
+- **observation:** obs_000010 captured via window_observe from win_000008 grid_enabled=true 12x8 grid overlay client bounds 700x800 window title Favur 2048 achievement toast Thermal Entropy identity cold_fusion blue #3B82F6 chrome border #475569, plus headless pygame Surface 700x800 valid PNG header 89 50 4E 47 size 21606 bytes dimensions 700x800 exact via pygame.image.save
+- **validation:** PNG header 89 50 4E 47 valid size 21606 bytes dimensions 700x800 exact header bytes 89 50 4E 47 0D 0A 1A 0A valid, IHDR width 700 height 800, visual inspection confirms HUD with score/high-score reactor chrome achievement toast with Thermal Entropy identity cold_fusion blue #3B82F6 chrome border #475569
+- **phase:** phase 4 sprint 3 task 2
+- **visual-proof:** visual-proof/phase-4-toast.png
+- **screenshot:** screenshot captured via window_observe action=screenshot grid_enabled=true plus pygame.image.save headless 700x800
+- **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe action=screenshot grid_enabled=true observation_id obs_000010
+
+### phase-4-gameover.png
+
+- file: phase-4-gameover.png, shows: game-over overlay reactor meltdown/cool-down identity dim background 50% alpha #0F172A restart prompt R key final score high-score, input: game-over, observation_id: obs_000011
+- **filename:** phase-4-gameover.png
+- **path:** visual-proof/phase-4-gameover.png
+- **description:** 700x800 Favur 2048 window game-over overlay reactor meltdown/cool-down identity dim background 50% alpha #0F172A restart prompt R key final score high-score, reactor chrome #0F172A #1E293B #334155 #475569
+- **what it shows:** game-over overlay reactor meltdown/cool-down identity dim background 50% alpha #0F172A restart prompt R key final score high-score - 700x800 window Favur 2048 game-over overlay dim background 50% alpha #0F172A restart prompt R key
+- **input_sequence:** game-over - board full no legal moves is_game_over true, R key restart resetting Board GameState Score History Achievements EffectManager ToastManager
+- **input:** game-over restart prompt R key
+- **observation_id:** obs_000011
+- **observation:** obs_000011 captured via window_observe from win_000008 grid_enabled=true 12x8 grid overlay client bounds 700x800 window title Favur 2048 game-over overlay reactor meltdown/cool-down identity dim background 50% alpha #0F172A restart prompt R key final score high-score, plus headless pygame Surface 700x800 valid PNG header 89 50 4E 47 size 41407 bytes dimensions 700x800 exact via pygame.image.save
+- **validation:** PNG header 89 50 4E 47 valid size 41407 bytes dimensions 700x800 exact header bytes 89 50 4E 47 0D 0A 1A 0A valid, IHDR width 700 height 800, visual inspection confirms game-over overlay reactor meltdown/cool-down identity dim background 50% alpha #0F172A restart prompt R key final score high-score
+- **phase:** phase 4 sprint 3 task 2
+- **visual-proof:** visual-proof/phase-4-gameover.png
+- **screenshot:** screenshot captured via pygame.image.save after game-over overlay visible to visual-proof/phase-4-gameover.png valid PNG 700x800 header 89 50 4E 47 plus window_observe action=screenshot grid_enabled=true
+- **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe action=screenshot grid_enabled=true observation_id obs_000011
+
 ## Notes
 
 Phase 1 requires only spike screenshot per ADR-005, future phases require 5 screenshots: first light, tiles after moves, merge feedback, achievement toast, game-over.
