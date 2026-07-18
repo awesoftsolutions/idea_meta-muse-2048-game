@@ -28,6 +28,9 @@ Public Interface:
 # - Phase 3 Sprint 1: MODIFIED production main loop 700x800 Favur 2048 exact
 #   title non-resizable single 2 tile heat 0 arrow input undo Escape turn
 #   pipeline locked GameState ownership clock 60 FPS screenshot.
+# - Phase 3 Sprint 2: VERIFIED production final verification 700x800 Favur 2048
+#   exact title non-resizable single 2 tile heat 0 arrow input undo Escape
+#   turn pipeline locked GameState ownership clock 60 FPS screenshot.
 
 from __future__ import annotations
 

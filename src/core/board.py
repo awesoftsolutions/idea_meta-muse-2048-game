@@ -48,6 +48,8 @@ Public interface:
 # - Phase 3 Sprint 1: MODIFIED MergeInfo source_heats Tuple[int,int]
 #   (prev.heat, tile.heat) captured during _process_line new_heat max+gen
 #   clamped 0-3 Q-004.
+# - Phase 3 Sprint 2: VERIFIED MergeInfo source_heats Q-004 cold_fusion fix
+#   final audit production board pipeline locked.
 # - Phase 2 Sprint 1: Production board implementation - Tile dataclass with
 #   value (power-of-two >=2) + heat (0-3 clamped), Direction enum UP/DOWN/
 #   LEFT/RIGHT, SlideResult (grid, score_delta, moved, merges), MergeInfo

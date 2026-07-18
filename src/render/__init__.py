@@ -6,6 +6,8 @@ Exports draw_board and helpers per Phase 3 architecture.
 # CHANGELOG:
 # - Phase 3 Sprint 1: CREATED programmatic tile rendering heat identity
 #   #3B82F6 #F59E0B #EF4444 #FFFFFF glow reactor chrome.
+# - Phase 3 Sprint 2: VERIFIED exports draw_board lerp_heat_color
+#   value_to_base_color blend_colors cell_rect final audit.
 
 from src.render.tiles import (
     blend_colors,

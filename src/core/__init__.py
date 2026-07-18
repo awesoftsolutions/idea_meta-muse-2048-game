@@ -34,6 +34,8 @@ Public interface:
 """
 # CHANGELOG:
 # - Phase 3 Sprint 1: MODIFIED exports GameState 26.
+# - Phase 3 Sprint 2: VERIFIED exports 26 including GameState final audit
+#   headless importable ADR-015 E007.
 # - Phase 2 Sprint 3 Task 3: __all__ 25 exports final verification
 #   (Tile, Board, Direction, SlideResult, MergeInfo, BOARD_SIZE, HEAT_MIN, HEAT_MAX,
 #   create_empty_grid) plus 2 rules symbols (is_legal_move, is_game_over),

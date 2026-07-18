@@ -26,6 +26,8 @@ Public interface:
 # - Phase 3 Sprint 1: CREATED GameState aggregator Q-005 vent_streak
 #   unstable_survival undo_count move_count update_after_turn increment_undo
 #   definitions locked ADR-016.
+# - Phase 3 Sprint 2: VERIFIED GameState Q-005 ownership final audit
+#   vent_streak unstable_survival undo_count move_count definitions locked.
 
 from __future__ import annotations
 
