@@ -215,6 +215,9 @@ def draw_board(
         grid: 5x5 grid of Optional[Tile].
         score: Current score for HUD.
 
+    Returns:
+        None. Draws board with reactor chrome and heat identity, no mutation.
+
     Raises:
         ValueError: If surface None, grid not 5x5, Tile value not power of two.
     """
