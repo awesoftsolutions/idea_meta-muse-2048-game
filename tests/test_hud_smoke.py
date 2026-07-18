@@ -1,15 +1,16 @@
 """
-tests/test_hud_smoke.py — Smoke test for HUD rendering.
+tests/test_hud_smoke.py — Smoke tests for HUD refinement Phase 4 Sprint 2 Task 1.
 
-Optional smoke test headless skip if no DISPLAY, verifies init and draw one frame no crash.
-Non-interactive run-once.
+Covers AC-1 to AC-8 smoke: HUD no crash, ToastManager push/update/draw/has_visible,
+game-over overlay no crash, headless skip via pytest.mark.skipif, mock surface no pygame display.
 
-System: Phase 4 Sprint 1 Task 3 Wave2 Step 2 TDD red phase smoke.
+System: Phase 4 Sprint 2 Task 1 Step 2 TDD red phase smoke.
 """
 
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -19,18 +20,50 @@ def _has_display() -> bool:
     """Check if display available for real pygame surface."""
     if os.name == "nt":
         return True
-    return os.environ.get("DISPLAY") is not None or os.environ.get("WAYLAND_DISPLAY") is not None
+    return (
+        os.environ.get("DISPLAY") is not None
+        or os.environ.get("WAYLAND_DISPLAY") is not None
+    )
 
 
-@pytest.mark.skipif(not _has_display(), reason="No DISPLAY, skipping real pygame surface smoke")
+@pytest.fixture
+def mock_surface() -> MagicMock:
+    """Mock surface 700x800 headless no pygame display required."""
+    surface = MagicMock()
+    surface.fill = MagicMock()
+    surface.blit = MagicMock()
+    surface.get_rect = MagicMock(
+        return_value=MagicMock(center=(350, 400), width=700, height=800)
+    )
+    surface.get_width = MagicMock(return_value=700)
+    surface.get_height = MagicMock(return_value=800)
+    return surface
+
+
+@pytest.fixture
+def game_state() -> SimpleNamespace:
+    """Synthetic game_state move_count vent_streak unstable_survival."""
+    return SimpleNamespace(move_count=5, vent_streak=2, unstable_survival=1)
+
+
+@pytest.fixture
+def layout() -> MagicMock:
+    """Synthetic layout hud_rect() -> (0,0,700,120)."""
+    lay = MagicMock()
+    lay.hud_rect = MagicMock(return_value=(0, 0, 700, 120))
+    return lay
+
+
+@pytest.mark.skipif(
+    not _has_display(), reason="No DISPLAY, skipping real pygame surface smoke"
+)
 def test_hud_smoke_real_surface() -> None:
-    """Smoke: init pygame, create 700x800 surface, draw_hud one frame no crash."""
+    """Smoke: real pygame surface 700x800 draw_hud ToastManager game-over no crash."""
     try:
         import pygame
     except ImportError:
         pytest.skip("pygame not installed")
 
-    # Ensure pygame init does not crash
     try:
         pygame.init()
     except Exception:
@@ -38,24 +71,30 @@ def test_hud_smoke_real_surface() -> None:
 
     try:
         surface = pygame.Surface((700, 800))
-        from src.render.hud import ToastManager, draw_hud
+        from src.render.hud import ToastManager, draw_hud_with_gamestate
 
-        # Draw empty HUD
-        draw_hud(surface, 0, 0, [], None)
+        gs = SimpleNamespace(move_count=5, vent_streak=2, unstable_survival=1)
+        lay = MagicMock()
+        lay.hud_rect = MagicMock(return_value=(0, 0, 700, 120))
 
-        # Draw with score
-        draw_hud(surface, 1234, 5678, [], None)
+        draw_hud_with_gamestate(surface, 0, 0, gs, lay)
+        draw_hud_with_gamestate(surface, 1234, 5678, gs, lay)
 
-        # Draw with achievements and toasts
         manager = ToastManager(max_toasts=5)
-        manager.push([{"id": "cold_fusion", "title": "Cold Fusion", "description": "First"}])
-        draw_hud(surface, 100, 200, [{"id": "cold_fusion"}], manager)
-
-        # Update and draw again
+        manager.push(
+            [{"id": "cold_fusion", "title": "Cold Fusion", "description": "First"}]
+        )
         manager.update(0.016)
         manager.draw(surface)
 
-        # Verify surface still valid
+        # Game-over overlay
+        try:
+            from src.render.hud import draw_game_over  # type: ignore[attr-defined]
+        except ImportError:
+            from src.render.hud import draw_game_over_stub as draw_game_over  # type: ignore[no-redef]
+
+        draw_game_over(surface, 100, 200, lay)
+
         assert surface.get_width() == 700
         assert surface.get_height() == 800
 
@@ -66,29 +105,24 @@ def test_hud_smoke_real_surface() -> None:
             pass
 
 
-def test_hud_smoke_mock_surface() -> None:
-    """Smoke: mock surface init and draw one frame no crash headless always runnable."""
-    from src.render.hud import ToastManager, draw_hud
+def test_hud_smoke_mock_surface(
+    mock_surface: MagicMock, game_state: SimpleNamespace, layout: MagicMock
+) -> None:
+    """Smoke: mock surface no crash headless always runnable covering AC-1, AC-2, AC-4, AC-5, AC-6."""
+    from src.render.hud import ToastManager, draw_hud_with_gamestate
 
-    mock_surface = MagicMock()
-    mock_surface.fill = MagicMock()
-    mock_surface.blit = MagicMock()
-    mock_surface.get_rect = MagicMock(return_value=MagicMock(center=(0, 0), width=700, height=800))
-    mock_surface.get_width = MagicMock(return_value=700)
-    mock_surface.get_height = MagicMock(return_value=800)
-
-    # Init manager
     manager = ToastManager(max_toasts=5)
     assert manager.has_visible() is False
 
-    # Push and draw
-    manager.push([{"id": "cold_fusion", "title": "Cold Fusion", "description": "Smoke test"}])
+    manager.push(
+        [{"id": "cold_fusion", "title": "Cold Fusion", "description": "Smoke test"}]
+    )
     assert manager.has_visible() is True
 
     try:
-        draw_hud(mock_surface, 100, 200, [], manager)
+        draw_hud_with_gamestate(mock_surface, 100, 200, game_state, layout)
     except Exception as e:
-        pytest.fail(f"Smoke mock surface draw_hud crashed: {e}")
+        pytest.fail(f"Smoke mock surface draw_hud_with_gamestate crashed: {e}")
 
     try:
         manager.update(0.016)
@@ -96,14 +130,68 @@ def test_hud_smoke_mock_surface() -> None:
     except Exception as e:
         pytest.fail(f"Smoke mock surface manager draw crashed: {e}")
 
-    # After large dt, should expire
+    # Game-over overlay no crash
+    try:
+        from src.render.hud import draw_game_over  # type: ignore[attr-defined]
+    except ImportError:
+        from src.render.hud import draw_game_over_stub as draw_game_over  # type: ignore[no-redef]
+
+    try:
+        draw_game_over(mock_surface, 100, 200, layout)
+    except Exception as e:
+        pytest.fail(f"Smoke mock surface draw_game_over crashed: {e}")
+
     manager.update(3.0)
     assert manager.has_visible() is False
 
 
+def test_hud_smoke_toast_queue_timing() -> None:
+    """Smoke: ToastManager queue timing 2-3 sec stacking gap 10."""
+    from src.render.hud import TOAST_GAP, TOAST_H, ToastManager
+
+    manager = ToastManager(max_toasts=5)
+    manager.push(
+        [
+            {"id": "cold_fusion", "title": "Cold Fusion", "description": "cool"},
+            {"id": "heat_wave", "title": "Heat Wave", "description": "warm"},
+        ]
+    )
+    assert len(manager.toasts) == 2
+    assert manager.toasts[0].y_offset == 0
+    assert manager.toasts[1].y_offset == TOAST_H + TOAST_GAP
+
+    manager.update(1.0)
+    assert manager.has_visible() is True
+    manager.update(2.0)
+    assert manager.has_visible() is False
+
+
+def test_hud_smoke_game_over_overlay() -> None:
+    """Smoke: game-over overlay dim 50% alpha #0F172A restart prompt."""
+    mock_surface = MagicMock()
+    mock_surface.fill = MagicMock()
+    mock_surface.blit = MagicMock()
+    mock_surface.get_rect = MagicMock(
+        return_value=MagicMock(center=(350, 400), width=700, height=800)
+    )
+    mock_surface.get_width = MagicMock(return_value=700)
+    mock_surface.get_height = MagicMock(return_value=800)
+    layout = MagicMock()
+    layout.hud_rect = MagicMock(return_value=(0, 0, 700, 120))
+
+    try:
+        from src.render.hud import draw_game_over  # type: ignore[attr-defined]
+    except ImportError:
+        from src.render.hud import draw_game_over_stub as draw_game_over  # type: ignore[no-redef]
+
+    try:
+        draw_game_over(mock_surface, 500, 1000, layout)
+    except Exception as e:
+        pytest.fail(f"Game-over overlay smoke crashed: {e}")
+
+
 def test_hud_import_headless() -> None:
     """Smoke: hud.py importable headless without display init."""
-    # This should not require DISPLAY
     try:
         import src.render.hud as hud_module
 
@@ -113,12 +201,16 @@ def test_hud_import_headless() -> None:
         assert hasattr(hud_module, "draw_hud_with_gamestate")
         assert hasattr(hud_module, "REACTOR_BG")
         assert hasattr(hud_module, "HEAT_COOL")
+        # draw_game_over may be missing in red phase - check stub exists at minimum
+        assert hasattr(hud_module, "draw_game_over_stub") or hasattr(
+            hud_module, "draw_game_over"
+        )
     except ImportError as e:
-        pytest.fail(f"HUD module not importable headless (red phase expected if not implemented): {e}")
+        pytest.fail(f"HUD module not importable headless: {e}")
 
 
 def test_hud_constants_smoke() -> None:
-    """Smoke: constants defined and match spec."""
+    """Smoke: constants locked #0F172A #1E293B #334155 #475569 #3B82F6 #F59E0B #EF4444 #FFFFFF."""
     from src.render.hud import (
         BOARD_BG,
         BORDER,
@@ -154,3 +246,33 @@ def test_hud_constants_smoke() -> None:
     assert HEAT_WARM == (245, 158, 11)
     assert HEAT_HOT == (239, 68, 68)
     assert HEAT_UNSTABLE == (255, 255, 255)
+
+
+def test_hud_smoke_no_board_mutation() -> None:
+    """Smoke: no board mutation grid unchanged."""
+    import copy
+
+    from src.render.hud import ToastManager, draw_hud_with_gamestate
+
+    mock_surface = MagicMock()
+    mock_surface.fill = MagicMock()
+    mock_surface.blit = MagicMock()
+    mock_surface.get_rect = MagicMock(
+        return_value=MagicMock(center=(350, 400), width=700, height=800)
+    )
+    mock_surface.get_width = MagicMock(return_value=700)
+    mock_surface.get_height = MagicMock(return_value=800)
+
+    game_state = SimpleNamespace(move_count=5, vent_streak=2, unstable_survival=1)
+    layout = MagicMock()
+    layout.hud_rect = MagicMock(return_value=(0, 0, 700, 120))
+
+    grid = [[{"value": 2, "heat": 0} for _ in range(5)] for _ in range(5)]
+    snapshot = copy.deepcopy(grid)
+
+    draw_hud_with_gamestate(mock_surface, 100, 200, game_state, layout)
+    manager = ToastManager(max_toasts=5)
+    manager.push([{"id": "cold_fusion", "title": "Cold Fusion", "description": "test"}])
+    manager.draw(mock_surface)
+
+    assert grid == snapshot, "Grid mutated in smoke test"

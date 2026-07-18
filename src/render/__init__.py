@@ -10,6 +10,7 @@ Exports draw_board and helpers per Phase 3 architecture and Phase 4 HUD.
 #   value_to_base_color blend_colors cell_rect final audit.
 # - Phase 4 Sprint 1 Task 3: ADDED HUD exports draw_hud Toast ToastManager
 #   draw_hud_with_gamestate draw_game_over_stub reactor chrome constants.
+# - Phase 4 Sprint 2 Task 1: ADDED draw_game_over canonical export.
 
 from src.render.effects import EffectManager
 from src.render.hud import (
@@ -31,10 +32,12 @@ from src.render.hud import (
     WINDOW_W,
     Toast,
     ToastManager,
+    draw_game_over,
     draw_game_over_stub,
     draw_hud,
     draw_hud_with_gamestate,
 )
+
 from src.render.tiles import (
     blend_colors,
     cell_rect,
@@ -52,6 +55,7 @@ __all__ = [
     "EffectManager",
     "draw_hud",
     "draw_hud_with_gamestate",
+    "draw_game_over",
     "draw_game_over_stub",
     "Toast",
     "ToastManager",

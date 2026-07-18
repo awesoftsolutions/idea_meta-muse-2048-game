@@ -12,8 +12,9 @@ Purpose:
     no board mutation headless importable.
 
 System:
-    RenderHUD per Phase 4 Sprint 1 Task 3 Wave2. Part of src/render
-    subsystem per Phase 4 architecture IHUDRenderer and IToastManager.
+    RenderHUD per Phase 4 Sprint 2 Task 1. Part of src/render
+    subsystem per Phase 4 architecture IHUDRenderer, IToastManager,
+    IGameOverOverlay.
 
 Dependencies:
     - pygame-ce (local import for headless fallback, programmatic only
@@ -24,9 +25,9 @@ Dependencies:
 
 Used-by:
     - src/render/__init__.py exports
-    - src/main.py future wiring (belongs to T4)
-    - tests/test_hud.py 12 unit tests
-    - tests/test_hud_smoke.py 4 smoke tests
+    - src/main.py wiring HUD + toasts + game-over
+    - tests/test_hud.py 29 unit tests
+    - tests/test_hud_smoke.py 7 smoke tests
 
 Public Interface:
     Constants:
@@ -71,12 +72,14 @@ Public Interface:
             border_color: Tuple[int,int,int], alpha: int=255) -> None
             Raises: ValueError if surface is None
         draw_hud(surface: Any, score: int, high_score: int,
-            achievements: Optional[List[Any]]=None,
-            toasts: Optional[Any]=None) -> None
-            Raises: ValueError if surface is None
+            game_state: Any, layout: Any) -> None
+            Raises: ValueError if surface is None or game_state is None
         draw_hud_with_gamestate(surface: Any, score: int, high_score: int,
             game_state: Any, layout: Any) -> None
             Raises: ValueError if surface is None or game_state is None
+        draw_game_over(surface: Any, score: int, high_score: int,
+            layout: Any=None) -> None
+            Raises: ValueError if surface is None
         draw_game_over_stub(surface: Any, score: int, high_score: int,
             layout: Any=None) -> None
             Raises: ValueError if surface is None
@@ -89,13 +92,18 @@ Public Interface:
 #   max 5 alpha fading last 0.5 sec scale pulse 1.0->1.2->1.0 200ms reactor
 #   chrome #0F172A #1E293B #334155 #475569 programmatic only rect/circle alpha
 #   SysFont no board mutation headless importable.
+# - Phase 4 Sprint 2 Task 1: REFINED draw_hud canonical signature
+#   (surface, score, high_score, game_state, layout) per IHUDRenderer,
+#   implemented draw_game_over full spec dim 50% alpha #0F172A overlay
+#   700x800 Game Over centered SysFont 48 final score high-score restart
+#   prompt Press R to restart, kept draw_game_over_stub compat.
 
 from __future__ import annotations
 
 import math
 import random
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 # ---------------------------------------------------------------------------
 # Constants — reactor chrome and heat identity per spec
@@ -128,6 +136,7 @@ WINDOW_WIDTH: int = WINDOW_W
 WINDOW_HEIGHT: int = WINDOW_H
 TOAST_WIDTH: int = TOAST_W
 TOAST_HEIGHT: int = TOAST_H
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -166,17 +175,11 @@ def _determine_heat_treatment(achievement_id: str) -> str:
     if not isinstance(achievement_id, str):
         return "cool"
     lower_id = achievement_id.lower()
-    # Order matters: check unstable first, then hot, then warm, then cool
-    # But per pseudocode: cold/fusion -> cool, heat/warm -> warm, hot/vent -> hot, unstable/entropy -> unstable
-    # To avoid overlap (e.g., cold_fusion contains fusion), check in priority unstable > hot > warm > cool
-    # However tests expect cold_fusion -> cool, warm_flare -> warm, hot_vent -> hot, unstable_core -> unstable
-    # hot_vent contains both hot and vent, should be hot
     if "unstable" in lower_id or "entropy" in lower_id:
         return "unstable"
     if "hot" in lower_id or "vent" in lower_id:
         return "hot"
     if "warm" in lower_id or "heat" in lower_id:
-        # heat_burst should be warm per sample, but contains heat
         return "warm"
     if "cold" in lower_id or "fusion" in lower_id:
         return "cool"
@@ -196,15 +199,14 @@ def _create_toast_particles(
     Returns:
         List of particle dicts with x,y,vx,vy,life,max_life,color,size,alpha,heat.
     """
-    # Determine count per heat per spec
     if heat_treatment == "cool":
-        count = random.randint(2, 3)  # calm drift slow 2-3
+        count = random.randint(2, 3)
     elif heat_treatment == "warm":
-        count = random.randint(4, 5)  # flicker 4-5
+        count = random.randint(4, 5)
     elif heat_treatment == "hot":
-        count = random.randint(6, 8)  # intense spark 6-8
+        count = random.randint(6, 8)
     elif heat_treatment == "unstable":
-        count = random.randint(10, 12)  # white burst 10+ glow
+        count = random.randint(10, 12)
     else:
         count = random.randint(2, 3)
 
@@ -288,24 +290,13 @@ def _draw_reactor_chrome_panel(
     if pygame is not None:
         try:
             if alpha < 255:
-                # Temp surface with SRCALPHA for alpha blending
                 temp = pygame.Surface((w, h), pygame.SRCALPHA)
                 temp.fill((color[0], color[1], color[2], alpha))
                 surface.blit(temp, (x, y))
             else:
                 pygame.draw.rect(surface, color, rect)
-            # Border width 2 reactor chrome #475569
             pygame.draw.rect(surface, border_color, rect, 2)
         except (ValueError, TypeError, AttributeError, RuntimeError):
-            # For mock surfaces, try without border_radius and with fallback
-            try:
-                if pygame is not None:
-                    pygame.draw.rect(surface, color, rect)
-                    pygame.draw.rect(surface, border_color, rect, 2)
-            except (ValueError, TypeError, AttributeError, RuntimeError):
-                pass
-        except (AttributeError, RuntimeError):
-            # Mock surface fallback - try simple calls
             try:
                 if pygame is not None:
                     pygame.draw.rect(surface, color, rect)
@@ -313,7 +304,6 @@ def _draw_reactor_chrome_panel(
             except (ValueError, TypeError, AttributeError, RuntimeError):
                 pass
     else:
-        # No pygame, mock surface fallback
         try:
             surface.fill(color)  # type: ignore
         except (ValueError, TypeError, AttributeError, RuntimeError):
@@ -355,35 +345,15 @@ class Toast:
 
     def __post_init__(self) -> None:
         """Initialize heat_treatment and particles from achievement_id."""
-        # Determine heat_treatment from achievement_id if not explicitly set or default
-        # Only override if heat_treatment is default cool and id suggests otherwise
-        # But always compute from id for consistency per pseudocode
         derived = _determine_heat_treatment(self.achievement_id)
-        # If heat_treatment is still default cool, use derived; else keep if explicitly set
-        # For simplicity, always use derived unless heat_treatment was set to non-cool explicitly
-        # Check if current heat_treatment is cool and derived is different, use derived
-        # Actually per spec, heat_treatment derived from achievement_id
-        if self.heat_treatment == "cool":
-            # Use derived (could still be cool)
-            self.heat_treatment = derived
-        # If heat_treatment was explicitly set to non-cool, keep it (but still allow derived if needed)
-        # For test compatibility, ensure derived is used when id matches
-        # If achievement_id contains heat keywords, override to derived
-        # This ensures cold_fusion -> cool etc.
-        # Re-derive always from id for correctness
         self.heat_treatment = derived
 
-        # Create particles via _create_toast_particles at toast area (410,10) per spec
-        # Toast area top-right (700-290, 10) = (410,10)
-        toast_x = float(WINDOW_W - TOAST_W - 10 + TOAST_W // 2)
+        base_x = WINDOW_W - TOAST_W - 10
+        toast_x = float(base_x + TOAST_W // 2)
         toast_y = float(10 + TOAST_H // 2)
         if not self.particles:
             self.particles = _create_toast_particles(self.heat_treatment, toast_x, toast_y)
 
-        # Scale initial 1.0 per test_toast_dataclass_fields expects 1.0
-        # Pulse will be triggered via ToastManager push setting scale 1.2
-        # Keep scale at 1.0 for dataclass field test, but allow animation range [1.0,1.2]
-        # So we keep 1.0 here; manager will set 1.2 on push
         self.scale = 1.0
         self.alpha = 255
         self.elapsed = 0.0
@@ -426,11 +396,9 @@ class ToastManager:
             return
 
         for achievement in achievements:
-            # Bounded queue: remove oldest if >= max_toasts
             if len(self.toasts) >= self.max_toasts:
                 self.toasts.pop(0)
 
-            # Determine title/description from achievement object or dict
             achievement_id = ""
             title = ""
             description = ""
@@ -440,29 +408,23 @@ class ToastManager:
                 title = str(achievement.get("title", achievement_id))
                 description = str(achievement.get("description", ""))
             else:
-                # Object via getattr
                 achievement_id = str(
                     getattr(achievement, "id", getattr(achievement, "achievement_id", str(achievement)))
                 )
                 title = str(getattr(achievement, "title", achievement_id))
                 description = str(getattr(achievement, "description", ""))
 
-            # Create Toast
             toast = Toast(
                 achievement_id=achievement_id,
                 title=title,
                 description=description,
             )
 
-            # Trigger scale pulse: set scale 1.2 initial then lerp to 1.0 over 200ms in update
             toast.scale = 1.2
-
-            # Set y_offset for stacking
             toast.y_offset = len(self.toasts) * (TOAST_H + TOAST_GAP)
 
             self.toasts.append(toast)
 
-        # Recompute y_offset for all toasts stacking vertical gap 10
         for idx, t in enumerate(self.toasts):
             t.y_offset = idx * (TOAST_H + TOAST_GAP)
 
@@ -484,11 +446,9 @@ class ToastManager:
         if dt == 0:
             return
 
-        # Update each toast copy to allow removal
         for toast in self.toasts:
             toast.elapsed += dt
 
-            # Alpha fading last 0.5 sec
             if toast.elapsed > toast.duration - 0.5:
                 remaining = toast.duration - toast.elapsed
                 if remaining < 0:
@@ -501,14 +461,11 @@ class ToastManager:
             else:
                 toast.alpha = 255
 
-            # Scale pulse 1.0->1.2->1.0 200ms on push
             if toast.elapsed < 0.2:
-                # Lerp 1.2 -> 1.0 over 0.2 sec
                 toast.scale = 1.0 + 0.2 * (1 - toast.elapsed / 0.2)
             else:
                 toast.scale = 1.0
 
-            # Update particles: x+=vx*dt, y+=vy*dt, life-=dt, alpha fading
             for p in toast.particles:
                 try:
                     p["x"] += p["vx"] * dt
@@ -526,13 +483,10 @@ class ToastManager:
                 except (KeyError, TypeError, ValueError):
                     continue
 
-            # Remove dead particles life<=0
             toast.particles = [p for p in toast.particles if p.get("life", 0) > 0]
 
-        # Remove expired toasts where elapsed >= duration
         self.toasts = [t for t in self.toasts if t.elapsed < t.duration]
 
-        # Recompute y_offset for remaining toasts stacking vertical gap 10
         for idx, t in enumerate(self.toasts):
             t.y_offset = idx * (TOAST_H + TOAST_GAP)
 
@@ -554,25 +508,18 @@ class ToastManager:
             pygame = None  # type: ignore
 
         for index, toast in enumerate(self.toasts):
-            # Compute rect: x = WINDOW_W - TOAST_W -10, y = 10 + index*(TOAST_H+TOAST_GAP) + y_offset
-            # y_offset already includes stacking, but per spec also add index*...
-            # To avoid double offset, use y_offset directly plus base 10
             base_x = WINDOW_W - TOAST_W - 10
             base_y = 10 + toast.y_offset
 
-            # Apply scale to rect: width*scale height*scale centered
             scaled_w = int(TOAST_W * toast.scale)
             scaled_h = int(TOAST_H * toast.scale)
-            # Centered scaling
             cx = base_x + TOAST_W // 2
             cy = base_y + TOAST_H // 2
             draw_x = cx - scaled_w // 2
             draw_y = cy - scaled_h // 2
 
-            # Determine bg color per heat_treatment via _heat_color_for_treatment with alpha
             bg_color = _heat_color_for_treatment(toast.heat_treatment)
 
-            # Draw reactor chrome panel with bg color and BORDER #475569
             try:
                 _draw_reactor_chrome_panel(
                     surface,
@@ -584,16 +531,12 @@ class ToastManager:
             except ValueError:
                 raise
             except (ValueError, TypeError, AttributeError, RuntimeError):
-                # For mock surface, continue
                 pass
 
-            # Draw title and description via SysFont with alpha blending
             if pygame is not None:
                 try:
-                    # Title SysFont 20 bold white
                     title_font = pygame.font.SysFont(None, 20)
                     title_text = title_font.render(toast.title, True, (255, 255, 255))
-                    # Blit with alpha handling via temp surface if needed
                     if toast.alpha < 255:
                         temp_title = pygame.Surface(
                             (title_text.get_width(), title_text.get_height()), pygame.SRCALPHA
@@ -604,7 +547,6 @@ class ToastManager:
                     else:
                         surface.blit(title_text, (draw_x + 5, draw_y + 5))
 
-                    # Description SysFont 16 with alpha
                     desc_font = pygame.font.SysFont(None, 16)
                     desc_text = desc_font.render(toast.description, True, (200, 200, 200))
                     if toast.alpha < 255:
@@ -617,7 +559,6 @@ class ToastManager:
                     else:
                         surface.blit(desc_text, (draw_x + 5, draw_y + 25))
 
-                    # Draw particles via circle with alpha via temp surface
                     for p in toast.particles:
                         try:
                             if p.get("alpha", 0) <= 0:
@@ -627,7 +568,6 @@ class ToastManager:
                             size = int(p.get("size", 2))
                             color = p.get("color", bg_color)
                             alpha = int(p.get("alpha", 255))
-                            # Temp surface for alpha
                             diam = max(1, size * 2)
                             temp_p = pygame.Surface((diam, diam), pygame.SRCALPHA)
                             pygame.draw.circle(
@@ -638,7 +578,6 @@ class ToastManager:
                             )
                             surface.blit(temp_p, (px - size, py - size))
                         except (ValueError, TypeError, KeyError, AttributeError):
-                            # Fallback without alpha
                             try:
                                 pygame.draw.circle(
                                     surface,
@@ -652,23 +591,6 @@ class ToastManager:
                             pass
                 except (ValueError, TypeError, AttributeError, RuntimeError):
                     pass
-                except (AttributeError, RuntimeError):
-                    # Mock surface fallback
-                    try:
-                        # Try simple draw without alpha
-                        for p in toast.particles:
-                            try:
-                                if pygame is not None:
-                                    pygame.draw.circle(
-                                        surface,
-                                        p.get("color", bg_color),
-                                        (int(p.get("x", 0)), int(p.get("y", 0))),
-                                        int(p.get("size", 2)),
-                                    )
-                            except (ValueError, TypeError, AttributeError, KeyError, RuntimeError):
-                                pass
-                    except (ValueError, TypeError, AttributeError, RuntimeError):
-                        pass
 
     def has_visible(self) -> bool:
         """Check if any toast visible.
@@ -685,7 +607,7 @@ class ToastManager:
 
 
 # ---------------------------------------------------------------------------
-# Primary HUD draw function per kickoff signature
+# Primary HUD draw function canonical architecture signature IHUDRenderer
 # ---------------------------------------------------------------------------
 
 
@@ -693,42 +615,52 @@ def draw_hud(
     surface: Any,
     score: int,
     high_score: int,
-    achievements: Optional[List[Any]] = None,
-    toasts: Optional[Any] = None,
+    game_state: Any,
+    layout: Any,
 ) -> None:
-    """Primary HUD per kickoff signature.
+    """Draw HUD area top background #0F172A score current top-left SysFont 36.
 
-    Draws reactor chrome background HUD area top with score current top-left
-    and high_score top-right using SysFont, verified by unit test no crash.
+    Implements IHUDRenderer canonical signature per architecture:
+    draw_hud(surface, score, high_score, game_state, layout) with reactor
+    chrome #0F172A #1E293B #334155 #475569 and heat legend #3B82F6 #F59E0B
+    #EF4444 #FFFFFF.
 
     Args:
-        surface: Pygame surface 700x800 or mock surface.
-        score: Current score.
-        high_score: Best score.
-        achievements: Optional list of achievements for heat legend.
-        toasts: Optional ToastManager or list of Toast for queue.
+        surface: Pygame surface 700x800.
+        score: Current score int.
+        high_score: Best score int.
+        game_state: GameState with move_count vent_streak unstable_survival.
+        layout: RenderLayout with hud_rect() or None uses default (0,0,700,120).
 
     Raises:
-        ValueError: If surface is None with message surface None.
+        ValueError: If surface is None or game_state is None.
     """
     if surface is None:
         raise ValueError("surface None")
+    if game_state is None:
+        raise ValueError("game_state None")
 
     if score is None:
         score = 0
     if high_score is None:
         high_score = 0
 
-    if achievements is None:
-        achievements = []
-
     try:
         import pygame
     except ImportError:
         pygame = None  # type: ignore
 
-    # Define HUD rect (0,0,700,120) top area
-    hud_rect = (0, 0, WINDOW_W, HUD_H)
+    # Determine hud_rect: if layout not None and has hud_rect callable -> call else default
+    hud_rect: Tuple[int, int, int, int] = (0, 0, WINDOW_W, HUD_H)
+    if layout is not None:
+        try:
+            hud_rect_method = getattr(layout, "hud_rect", None)
+            if callable(hud_rect_method):
+                result = hud_rect_method()
+                if result is not None and len(result) == 4:
+                    hud_rect = tuple(result)  # type: ignore
+        except (AttributeError, ValueError, TypeError, RuntimeError):
+            pass
 
     # Draw reactor chrome background #0F172A via _draw_reactor_chrome_panel
     try:
@@ -738,23 +670,19 @@ def draw_hud(
     except (ValueError, TypeError, AttributeError, RuntimeError):
         pass
 
-    # Draw score current top-left SysFont None 36 white at (20,20)
-    # Draw high_score top-right SysFont None 24 warm #F59E0B at (700-150,20)
-    # Draw mode label Thermal Entropy Core fixed corner SysFont 18 #475569 at (20,100)
     if pygame is not None:
+        # Score current top-left SysFont None 36 white "Score: {score}" at (20,20)
         try:
-            # Score
             score_font = pygame.font.SysFont(None, 36)
             score_text = score_font.render(f"Score: {score}", True, (255, 255, 255))
             surface.blit(score_text, (20, 20))
         except (ValueError, TypeError, AttributeError, RuntimeError):
             pass
 
+        # High-score top-right SysFont None 24 warm #F59E0B "Best: {high_score}"
         try:
-            # High score top-right right aligned
             high_font = pygame.font.SysFont(None, 24)
             high_text = high_font.render(f"Best: {high_score}", True, HEAT_WARM)
-            # Right aligned at 700-150,20 but use surface width fallback
             try:
                 surf_w = surface.get_width()
             except (AttributeError, ValueError, TypeError, RuntimeError):
@@ -766,75 +694,79 @@ def draw_hud(
         except (ValueError, TypeError, AttributeError, RuntimeError):
             pass
 
-        # Heat legend #3B82F6 #F59E0B #EF4444 #FFFFFF small rects 15x15 with labels
-        if achievements and len(achievements) > 0:
-            try:
-                legend_x = 20
-                legend_y = 60
-                heat_colors = [HEAT_COOL, HEAT_WARM, HEAT_HOT, HEAT_UNSTABLE]
-                heat_labels = ["cool", "warm", "hot", "unstable"]
-                legend_font = pygame.font.SysFont(None, 14)
-                for idx, (h_color, h_label) in enumerate(zip(heat_colors, heat_labels)):
-                    lx = legend_x + idx * (15 + 40)  # rect 15 + gap + label width approx
-                    # Draw rect 15x15 with color
-                    try:
-                        pygame.draw.rect(surface, h_color, (lx, legend_y, 15, 15))
-                    except (ValueError, TypeError, AttributeError, RuntimeError):
-                        pass
-                    try:
-                        label_text = legend_font.render(h_label, True, (255, 255, 255))
-                        surface.blit(label_text, (lx + 18, legend_y))
-                    except (ValueError, TypeError, AttributeError, RuntimeError):
-                        pass
-            except (ValueError, TypeError, AttributeError, RuntimeError):
-                pass
-
+        # Move count middle SysFont 24 white "Moves: {game_state.move_count}" at (200,20)
         try:
-            # Mode label overlay fixed corner per SOW Thermal Entropy Core
+            move_count = getattr(game_state, "move_count", None)
+            if move_count is not None:
+                font = pygame.font.SysFont(None, 24)
+                text = font.render(f"Moves: {move_count}", True, (255, 255, 255))
+                surface.blit(text, (200, 20))
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
+
+        # vent_streak indicator any edge vented: getattr vent_streak int if >0 render
+        try:
+            vent_streak = getattr(game_state, "vent_streak", 0)
+            if isinstance(vent_streak, int):
+                if vent_streak > 0:
+                    font = pygame.font.SysFont(None, 24)
+                    text = font.render(f"Vent: {vent_streak}", True, HEAT_WARM)
+                    surface.blit(text, (350, 20))
+                else:
+                    # Still render with cool color for visibility when 0? per spec show indicator
+                    # Render only if >0 to avoid clutter, but spec says indicator any edge vented
+                    pass
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
+
+        # unstable_survival indicator survived with unstable present
+        try:
+            unstable_survival = getattr(game_state, "unstable_survival", 0)
+            if isinstance(unstable_survival, int) and unstable_survival > 0:
+                font = pygame.font.SysFont(None, 24)
+                text = font.render(f"Survival: {unstable_survival}", True, HEAT_UNSTABLE)
+                surface.blit(text, (450, 20))
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
+
+        # Heat legend #3B82F6 #F59E0B #EF4444 #FFFFFF small rects 15x15 with labels
+        try:
+            legend_x = 20
+            legend_y = 60
+            heat_colors = [HEAT_COOL, HEAT_WARM, HEAT_HOT, HEAT_UNSTABLE]
+            heat_labels = ["cool", "warm", "hot", "unstable"]
+            legend_font = pygame.font.SysFont(None, 14)
+            for idx, (h_color, h_label) in enumerate(zip(heat_colors, heat_labels)):
+                lx = legend_x + idx * (15 + 40)
+                try:
+                    pygame.draw.rect(surface, h_color, (lx, legend_y, 15, 15))
+                except (ValueError, TypeError, AttributeError, RuntimeError):
+                    pass
+                try:
+                    label_text = legend_font.render(h_label, True, (255, 255, 255))
+                    surface.blit(label_text, (lx + 18, legend_y))
+                except (ValueError, TypeError, AttributeError, RuntimeError):
+                    pass
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
+
+        # Reactor chrome border #475569 around hud_rect width 2
+        try:
+            pygame.draw.rect(surface, BORDER, hud_rect, 2)
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
+
+        # Mode label overlay fixed corner per SOW Thermal Entropy Core bottom-left SysFont 18 border #475569 at (20,100)
+        try:
             mode_font = pygame.font.SysFont(None, 18)
             mode_text = mode_font.render("Thermal Entropy Core", True, BORDER)
             surface.blit(mode_text, (20, 100))
         except (ValueError, TypeError, AttributeError, RuntimeError):
             pass
 
-    # Handle toasts as ToastManager instance or list of Toast
-    try:
-        if toasts is not None:
-            if isinstance(toasts, ToastManager):
-                toasts.draw(surface)
-            elif isinstance(toasts, list):
-                # Create temporary ToastManager, push list, draw
-                # But list may already be Toast objects
-                # If list contains Toast, add directly
-                temp_manager = ToastManager(max_toasts=MAX_TOASTS)
-                # Check if list contains Toast instances
-                if len(toasts) > 0 and isinstance(toasts[0], Toast):
-                    temp_manager.toasts = toasts  # type: ignore
-                    # Recompute y_offset
-                    for idx, t in enumerate(temp_manager.toasts):
-                        t.y_offset = idx * (TOAST_H + TOAST_GAP)
-                else:
-                    # Assume achievements list
-                    temp_manager.push(toasts)
-                temp_manager.draw(surface)
-    except ValueError:
-        raise
-    except (ValueError, TypeError, AttributeError, RuntimeError):
-        pass
-
-    # Draw border chrome #475569 around HUD rect width 2
-    if pygame is not None:
-        try:
-            pygame.draw.rect(surface, BORDER, hud_rect, 2)
-        except (ValueError, TypeError, AttributeError, RuntimeError):
-            pass
-
-    # Ensure no board mutation: do not modify score, high_score, achievements, toasts inputs
-    # (ints immutable, list not mutated by design)
-
 
 # ---------------------------------------------------------------------------
-# Expanded architecture signature IHUDRenderer
+# Wrapper for backward compat calling canonical draw_hud
 # ---------------------------------------------------------------------------
 
 
@@ -845,7 +777,7 @@ def draw_hud_with_gamestate(
     game_state: Any,
     layout: Any,
 ) -> None:
-    """Expanded architecture signature IHUDRenderer with game_state and layout.
+    """Wrapper for backward compat, calls draw_hud with same args.
 
     Args:
         surface: Pygame surface.
@@ -862,13 +794,47 @@ def draw_hud_with_gamestate(
     if game_state is None:
         raise ValueError("game_state None")
 
-    # Call draw_hud base for base HUD
     try:
-        draw_hud(surface, score, high_score, achievements=None, toasts=None)
+        draw_hud(surface, score, high_score, game_state, layout)
     except ValueError:
         raise
     except (ValueError, TypeError, AttributeError, RuntimeError):
         pass
+
+
+# ---------------------------------------------------------------------------
+# Game-over overlay full spec IGameOverOverlay
+# ---------------------------------------------------------------------------
+
+
+def draw_game_over(
+    surface: Any,
+    score: int,
+    high_score: int,
+    layout: Any = None,
+) -> None:
+    """Draw game-over overlay dim 50% alpha #0F172A 700x800 Game Over centered.
+
+    Implements IGameOverOverlay per architecture: overlay surface 700x800
+    alpha 128 50% #0F172A dim background, Game Over label centered SysFont 48
+    bold final score high-score restart prompt Press R to restart.
+
+    Args:
+        surface: Pygame surface 700x800.
+        score: Final score int.
+        high_score: Best score int.
+        layout: Optional RenderLayout.
+
+    Raises:
+        ValueError: If surface is None.
+    """
+    if surface is None:
+        raise ValueError("surface None")
+
+    if score is None:
+        score = 0
+    if high_score is None:
+        high_score = 0
 
     try:
         import pygame
@@ -876,41 +842,70 @@ def draw_hud_with_gamestate(
         pygame = None  # type: ignore
 
     if pygame is not None:
+        # Create overlay surface 700x800 with SRCALPHA alpha 128 50% #0F172A dim background
         try:
-            # Additionally draw move_count, vent_streak, unstable_survival from game_state
-            move_count = getattr(game_state, "move_count", None)
-            if move_count is not None:
-                font = pygame.font.SysFont(None, 24)
-                text = font.render(f"Moves: {move_count}", True, (255, 255, 255))
-                surface.blit(text, (200, 20))
+            overlay = pygame.Surface((WINDOW_W, WINDOW_H), pygame.SRCALPHA)
+            overlay.fill((REACTOR_BG[0], REACTOR_BG[1], REACTOR_BG[2], 128))
+            surface.blit(overlay, (0, 0))
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
 
-            vent_streak = getattr(game_state, "vent_streak", 0)
-            if isinstance(vent_streak, int) and vent_streak > 0:
-                font = pygame.font.SysFont(None, 24)
-                text = font.render(f"Vent: {vent_streak}", True, HEAT_WARM)
-                surface.blit(text, (350, 20))
+        # Game Over label centered SysFont None 48 bold #FFFFFF "Game Over" at centered WINDOW_W//2 - rect.width//2, 400
+        try:
+            font_large = pygame.font.SysFont(None, 48)
+            game_over_text = font_large.render("Game Over", True, (255, 255, 255))
+            try:
+                rect = game_over_text.get_rect()
+                cx = WINDOW_W // 2 - rect.width // 2
+            except (AttributeError, ValueError, TypeError, RuntimeError):
+                cx = 250
+            surface.blit(game_over_text, (cx, 400))
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
 
-            unstable_survival = getattr(game_state, "unstable_survival", 0)
-            if isinstance(unstable_survival, int) and unstable_survival > 0:
-                font = pygame.font.SysFont(None, 24)
-                text = font.render(f"Survival: {unstable_survival}", True, HEAT_UNSTABLE)
-                surface.blit(text, (450, 20))
+        # Final score high-score SysFont 36 white "Score: {score} Best: {high_score}" centered at WINDOW_W//2 - width//2,450
+        try:
+            font_mid = pygame.font.SysFont(None, 36)
+            final_text = font_mid.render(f"Score: {score} Best: {high_score}", True, (255, 255, 255))
+            try:
+                rect = final_text.get_rect()
+                cx = WINDOW_W // 2 - rect.width // 2
+            except (AttributeError, ValueError, TypeError, RuntimeError):
+                cx = 200
+            surface.blit(final_text, (cx, 450))
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
 
-            # If layout provided then use layout.hud_rect() for positioning else default
-            if layout is not None:
-                try:
-                    hud_rect_method = getattr(layout, "hud_rect", None)
-                    if callable(hud_rect_method):
-                        _ = hud_rect_method()
-                    # Could use layout for positioning but keep default for now
-                except (AttributeError, ValueError, TypeError, RuntimeError):
-                    pass
+        # Reactor meltdown/cool-down identity: subtle tint via overlay already #0F172A
+        # Restart prompt Press R to restart SysFont 24 #F59E0B centered at 500
+        try:
+            font_small = pygame.font.SysFont(None, 24)
+            restart_text = font_small.render("Press R to restart", True, HEAT_WARM)
+            try:
+                rect = restart_text.get_rect()
+                cx = WINDOW_W // 2 - rect.width // 2
+            except (AttributeError, ValueError, TypeError, RuntimeError):
+                cx = 250
+            surface.blit(restart_text, (cx, 500))
+        except (ValueError, TypeError, AttributeError, RuntimeError):
+            pass
+
+        # Escape prompt Press Escape to quit SysFont 18 #475569 centered at 530
+        try:
+            font_tiny = pygame.font.SysFont(None, 18)
+            esc_text = font_tiny.render("Press Escape to quit", True, BORDER)
+            try:
+                rect = esc_text.get_rect()
+                cx = WINDOW_W // 2 - rect.width // 2
+            except (AttributeError, ValueError, TypeError, RuntimeError):
+                cx = 250
+            surface.blit(esc_text, (cx, 530))
         except (ValueError, TypeError, AttributeError, RuntimeError):
             pass
 
 
 # ---------------------------------------------------------------------------
-# Minimal stub for game-over overlay to satisfy exports, full logic belongs to M2
+# Minimal stub for backward compat calling full draw_game_over
 # ---------------------------------------------------------------------------
 
 
@@ -920,7 +915,7 @@ def draw_game_over_stub(
     high_score: int,
     layout: Any = None,
 ) -> None:
-    """Minimal stub for game-over overlay.
+    """Minimal stub for game-over overlay maintaining compat.
 
     Args:
         surface: Pygame surface 700x800.
@@ -934,68 +929,4 @@ def draw_game_over_stub(
     if surface is None:
         raise ValueError("surface None")
 
-    try:
-        import pygame
-    except ImportError:
-        pygame = None  # type: ignore
-
-    if pygame is not None:
-        try:
-            # Create overlay surface 700x800 with SRCALPHA alpha 128 50% #0F172A dim
-            overlay = pygame.Surface((WINDOW_W, WINDOW_H), pygame.SRCALPHA)
-            overlay.fill((REACTOR_BG[0], REACTOR_BG[1], REACTOR_BG[2], 128))
-            surface.blit(overlay, (0, 0))
-        except (ValueError, TypeError, AttributeError, RuntimeError):
-            pass
-
-        try:
-            # Game Over label SysFont 48 bold white centered at (350,400)
-            font_large = pygame.font.SysFont(None, 48)
-            game_over_text = font_large.render("Game Over", True, (255, 255, 255))
-            try:
-                rect = game_over_text.get_rect()
-                cx = WINDOW_W // 2 - rect.width // 2
-            except (AttributeError, ValueError, TypeError, RuntimeError):
-                cx = 250
-            surface.blit(game_over_text, (cx, 400))
-        except (ValueError, TypeError, AttributeError, RuntimeError):
-            pass
-
-        try:
-            # Final score and high_score SysFont 36 at (350,450)
-            font_mid = pygame.font.SysFont(None, 36)
-            final_text = font_mid.render(f"Score: {score} Best: {high_score}", True, (255, 255, 255))
-            try:
-                rect = final_text.get_rect()
-                cx = WINDOW_W // 2 - rect.width // 2
-            except (AttributeError, ValueError, TypeError, RuntimeError):
-                cx = 200
-            surface.blit(final_text, (cx, 450))
-        except (ValueError, TypeError, AttributeError, RuntimeError):
-            pass
-
-        try:
-            # Restart prompt Press R to restart SysFont 24 #F59E0B at (350,500)
-            font_small = pygame.font.SysFont(None, 24)
-            restart_text = font_small.render("Press R to restart", True, HEAT_WARM)
-            try:
-                rect = restart_text.get_rect()
-                cx = WINDOW_W // 2 - rect.width // 2
-            except (AttributeError, ValueError, TypeError, RuntimeError):
-                cx = 250
-            surface.blit(restart_text, (cx, 500))
-        except (ValueError, TypeError, AttributeError, RuntimeError):
-            pass
-
-        try:
-            # Escape prompt Press Escape to quit SysFont 18 #475569 at (350,530)
-            font_tiny = pygame.font.SysFont(None, 18)
-            esc_text = font_tiny.render("Press Escape to quit", True, BORDER)
-            try:
-                rect = esc_text.get_rect()
-                cx = WINDOW_W // 2 - rect.width // 2
-            except (AttributeError, ValueError, TypeError, RuntimeError):
-                cx = 250
-            surface.blit(esc_text, (cx, 530))
-        except (ValueError, TypeError, AttributeError, RuntimeError):
-            pass
+    draw_game_over(surface, score, high_score, layout)
