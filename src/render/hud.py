@@ -119,6 +119,9 @@ Public Interface:
 #   prompt Press R to restart, kept draw_game_over_stub compat.
 # - Phase 4 Sprint 3: VERIFIED ToastManager HUD toasts gameover overlay
 #   wiring in main loop screenshot gating, no logic change, changelog compliance.
+# - Phase 5 Sprint 2: FINALIZED visual-proof sweep manifest 7+ entries
+#   obs_000001-012 gating PASS Q-001 avg 1.385, toast base_x 10 width 200
+#   stacking gap 10 max 5 alpha fading scale pulse verification.
 
 from __future__ import annotations
 

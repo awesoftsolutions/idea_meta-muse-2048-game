@@ -86,6 +86,10 @@ Public Interface:
 #   alpha no board mutation SysFont only.
 # - Phase 4 Sprint 3: VERIFIED EffectManager slide lerp merge pulse particles
 #   wiring in main loop dt-based animation, no logic change, changelog compliance.
+# - Phase 5 Sprint 2: FINALIZED visual-proof sweep manifest 7+ entries
+#   obs_000001-012 gating PASS Q-001 avg 1.385, heat-aware particles verification
+#   cool #3B82F6 calm drift warm #F59E0B flicker hot #EF4444 spark unstable
+#   #FFFFFF burst dt-based animation wiring verification.
 
 from __future__ import annotations
 

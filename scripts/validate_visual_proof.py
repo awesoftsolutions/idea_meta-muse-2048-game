@@ -26,6 +26,10 @@ Functions:
         complete per SOW gating.
     main(): Run validation, print PASS/FAIL, return exit code 0/1.
 """
+# CHANGELOG:
+# - Phase 5 Sprint 2: CREATED validation script 396 lines gating PASS manifest
+#   7+ entries obs_000001-012 Q-001 avg 1.385, PNG header 89 50 4E 47 700x800
+#   IHDR struct unpack stdlib only CI readiness, visual-proof sweep finalization.
 
 from __future__ import annotations
 

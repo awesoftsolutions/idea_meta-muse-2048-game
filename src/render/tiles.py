@@ -81,6 +81,9 @@ Public Interface:
 # - Phase 4 Sprint 3: VERIFIED unified 70% heat 30% base no debug dot
 #   no gray fallback palette extension, wiring in main loop, no logic change,
 #   changelog compliance.
+# - Phase 5 Sprint 2: FINALIZED visual-proof sweep manifest 7+ entries
+#   obs_000001-012 gating PASS Q-001 avg 1.385, unified 70% heat 30% base
+#   verification no debug dot no gray fallback palette extension.
 
 from __future__ import annotations
 

@@ -80,6 +80,10 @@ Public Interface:
 #   specific except OSError, bare except fix to specific except
 #   (ValueError, TypeError, pygame.error), turn pipeline locked via board.slide()
 #   internal GameState ownership per ADR-016, EffectManager ToastManager wiring.
+# - Phase 5 Sprint 2: FINALIZED visual-proof sweep manifest 7+ entries
+#   obs_000001-012 gating PASS Q-001 avg 1.385, main loop minimal hook boolean
+#   guard dir creation OSError handling fallback removal toast fix single tick
+#   screenshot gating verification.
 
 from __future__ import annotations
 
