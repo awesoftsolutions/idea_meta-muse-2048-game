@@ -84,6 +84,12 @@ Public Interface:
 #   obs_000001-012 gating PASS Q-001 avg 1.385, main loop minimal hook boolean
 #   guard dir creation OSError handling fallback removal toast fix single tick
 #   screenshot gating verification.
+# - Phase 6 Sprint 1: PACKAGING HARDENING guard __main__ main() callable
+#   sys._MEIPASS aware single tick — _get_frozen_base_path sys._MEIPASS aware
+#   resource vs data separation, _is_frozen_binary sys._MEIPASS frozen check,
+#   main() packaging hardening guard __main__ main() callable, single tick
+#   dt=clock.tick(60)/1000.0, Q-018 fix base_y 130 below HUD_H 120px
+#   toast_rect 130+idx*(60+10), CI workflow packaging hardening validation.
 
 from __future__ import annotations
 

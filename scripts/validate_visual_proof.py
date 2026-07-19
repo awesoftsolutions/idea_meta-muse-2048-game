@@ -30,6 +30,13 @@ Functions:
 # - Phase 5 Sprint 2: CREATED validation script 396 lines gating PASS manifest
 #   7+ entries obs_000001-012 Q-001 avg 1.385, PNG header 89 50 4E 47 700x800
 #   IHDR struct unpack stdlib only CI readiness, visual-proof sweep finalization.
+# - Phase 6 Sprint 1: CI WORKFLOW + PACKAGING HARDENING validation —
+#   validate_png_header exists size>0 header 89 50 4E 47 dimensions 700x800
+#   IHDR struct.unpack >I offset 16-20, validate_manifest 7+ entries file what
+#   it shows input sequence observation_id obs_000001-012, validate_gating
+#   5 required PNGs valid header manifest complete SOW gating, main PASS/FAIL
+#   exit code 0/1, stdlib only pathlib sys struct re CI readiness packaging
+#   hardening sys._MEIPASS aware validation.
 
 from __future__ import annotations
 

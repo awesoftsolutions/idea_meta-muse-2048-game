@@ -27,6 +27,13 @@ Public interface:
 #   handling returning 0 never crash, save atomic temp file rename via
 #   os.replace, helper _validate_high_score_data bool subclass check,
 #   DEFAULT_HIGH_SCORE_PATH constant, stdlib only no pygame.
+# - Phase 6 Sprint 1: PACKAGING HARDENING writable fallback sys._MEIPASS aware —
+#   WRITABLE_DIR_NAME .favur-2048, HIGHSCORE_FILENAME highscore.json,
+#   LEGACY_HIGH_SCORE_PATH backward compat, get_writable_dir mkdir parents
+#   True exist_ok True OSError fallback relative, get_highscore_path
+#   sys._MEIPASS aware resource vs data separation writable user dir not
+#   _MEIPASS read-only, _is_frozen sys._MEIPASS frozen check, CI workflow
+#   packaging hardening validation.
 
 from __future__ import annotations
 
