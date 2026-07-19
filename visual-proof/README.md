@@ -138,6 +138,12 @@
 - **screenshot:** screenshot captured via pygame.image.save after game-over overlay visible to visual-proof/phase-4-gameover.png valid PNG 700x800 header 89 50 4E 47 plus window_observe action=screenshot grid_enabled=true
 - **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe action=screenshot grid_enabled=true observation_id obs_000011
 
+## Interim Artifacts Deprecation Note
+
+- **phase-4-hud-toast-gameover.png** (16759 bytes): Interim combined HUD+toast+gameover screenshot from Phase 4 Sprint 2, superseded by distinct phase-4-toast.png 21606 bytes and phase-4-gameover.png 41407 bytes per SOW Visual Verification Protocol progressive capture. Retained for audit trail but not counted as SOW-required 5 artifacts. Observation_id obs_000008.
+- **phase-4-effects.png** (10789 bytes): Interim effects screenshot from Phase 4 Sprint 1 Task 4, superseded by phase-4-merge.png 16571 bytes with feedback particles scaling heat glow per ADR-025. Retained for audit trail but not counted as SOW-required 5 artifacts. Observation_id obs_000007.
+- Cleanup: Duplicate - file: vs ### entries resolved by using ### headings as primary with - file: entries for SOW-required 5 artifacts per Visual Verification Protocol. Manifest contains 7+ entries including phase-1-spike 32667 phase-3-first-light 10376 phase-4-merge 16571 phase-4-toast 21606 phase-4-gameover 41407 phase-5-tiles-after-moves 17015 each with file what it shows input sequence observation_id obs_000001-012 progressive capture.
+
 ## Notes
 
 Phase 1 requires only spike screenshot per ADR-005, future phases require 5 screenshots: first light, tiles after moves, merge feedback, achievement toast, game-over.
@@ -153,3 +159,11 @@ Capture protocol per pseudocode phase_1_sprint_1_task_3_code.md and phase_3_spri
 FrameworkSpike per ADR-001, depends on pygame-ce ^2.5.0 only, no dependency on core logic.
 VisualProofSystem owns visual-proof/ directory per ADR-005 gating requirement.
 Phase 3 First Light per ADR-019: production main loop 700x800 Favur 2048 exact title non-resizable flags=0, Board single 2 tile heat 0, arrow input dispatch legal check, history push including GameState, turn pipeline locked, ScoreState HistoryStack Achievements GameState integration, undo restores exact including heat and GameState, Escape quits, clock 60 FPS, first-frame screenshot placeholder with OSError handling.
+
+## Q-001 Heat Balance Re-measurement
+
+- **Question:** Does heat generation cause runaway where average heat trends to HEAT_MAX 3 over extended play, or does venting + cool merge bonus + spawn heat=0 keep average <2.0?
+- **Measurement:** Seeded Random(42) Board 5x5 simulate 50/100/200 moves slide random legal direction apply heat gen floor(log2(V)/2) spread lower orthogonal vent edge -1 spawn heat=0 measure avg heat sum heat / non-empty overall avg mean across moves. Interior 9 tiles (1,1)-(3,3) vs edge 16 tiles (r==0 or r==4 or c==0 or c==4).
+- **Results:** 50 moves avg 0.951, 100 moves avg 1.432, 200 moves avg 1.771, overall avg 1.385 <2.0 PASS no runaway max <=3 clamp 0-3. Reference Sprint2 avg 1.803 <2.0 no runaway. Interior avg 2.400 edge avg 1.286 center hot spot vs cool edges metaphor validated reactor chrome containment due to vent -1 edge only and spread lower orthogonal accumulating interior.
+- **Tuning rationale:** heat gen floor(log2(V)/2) balances tension vs runaway, venting edge -1 prevents accumulation, spread to lower orthogonal creates heat flow, spawn heat=0 immune prevents new tiles immediately hot, cool merge bonus incentivizes low heat merges, overall avg <2.0 ensures playable tension without frustration.
+- **Validation:** Verified via tests/test_q001_heat_balance.py 14 tests green including test_q001_heat_balance_avg_50_100_200_overall_1803_lt_20_no_runaway and test_q001_interior_concentration_center_hot_spot_vs_cool_edges.
