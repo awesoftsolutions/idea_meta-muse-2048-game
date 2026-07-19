@@ -41,11 +41,11 @@ Public Interface:
         HEAT_HOT: Tuple[int,int,int] = (239,68,68) #EF4444
         HEAT_UNSTABLE: Tuple[int,int,int] = (255,255,255) #FFFFFF
         WINDOW_W: int = 700, WINDOW_H: int = 800, HUD_H: int = 120
-        TOAST_W: int = 280, TOAST_H: int = 60, TOAST_DURATION: float = 2.5
+        TOAST_W: int = 200, TOAST_H: int = 60, TOAST_DURATION: float = 2.5
         TOAST_GAP: int = 10, MAX_TOASTS: int = 5
         WINDOW_WIDTH: int = 700 alias
         WINDOW_HEIGHT: int = 800 alias
-        TOAST_WIDTH: int = 280 alias
+        TOAST_WIDTH: int = 200 alias
         TOAST_HEIGHT: int = 60 alias
     Classes:
         Toast dataclass:
@@ -147,7 +147,7 @@ HEAT_UNSTABLE: Tuple[int, int, int] = (255, 255, 255)  # #FFFFFF unstable 3 glow
 WINDOW_W: int = 700
 WINDOW_H: int = 800
 HUD_H: int = 120
-TOAST_W: int = 280
+TOAST_W: int = 200
 TOAST_H: int = 60
 TOAST_DURATION: float = 2.5
 TOAST_GAP: int = 10
@@ -156,7 +156,7 @@ MAX_TOASTS: int = 5
 # Aliases for compatibility
 WINDOW_WIDTH: int = WINDOW_W
 WINDOW_HEIGHT: int = WINDOW_H
-TOAST_WIDTH: int = TOAST_W
+TOAST_WIDTH: int = 200
 TOAST_HEIGHT: int = TOAST_H
 
 
@@ -370,7 +370,7 @@ class Toast:
         derived = _determine_heat_treatment(self.achievement_id)
         self.heat_treatment = derived
 
-        base_x = WINDOW_W - TOAST_W - 10
+        base_x = 10
         toast_x = float(base_x + TOAST_W // 2)
         toast_y = float(10 + TOAST_H // 2)
         if not self.particles:
@@ -530,7 +530,7 @@ class ToastManager:
             pygame = None  # type: ignore
 
         for index, toast in enumerate(self.toasts):
-            base_x = WINDOW_W - TOAST_W - 10
+            base_x = 10
             base_y = 10 + toast.y_offset
 
             scaled_w = int(TOAST_W * toast.scale)
@@ -864,11 +864,12 @@ def draw_game_over(
         pygame = None  # type: ignore
 
     if pygame is not None:
-        # Create overlay surface 700x800 with SRCALPHA alpha 128 50% #0F172A dim background
+        # Create overlay surface clipped to y>=HUD_H to preserve HUD top 120px
+        # HUD preserved during game-over dim top 120px per Q-016
         try:
-            overlay = pygame.Surface((WINDOW_W, WINDOW_H), pygame.SRCALPHA)
+            overlay = pygame.Surface((WINDOW_W, WINDOW_H - HUD_H), pygame.SRCALPHA)
             overlay.fill((REACTOR_BG[0], REACTOR_BG[1], REACTOR_BG[2], 128))
-            surface.blit(overlay, (0, 0))
+            surface.blit(overlay, (0, HUD_H))
         except (ValueError, TypeError, AttributeError, RuntimeError):
             pass
 

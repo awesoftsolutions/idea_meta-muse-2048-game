@@ -355,51 +355,19 @@ def reset_game_state(
         from src.render.effects import EffectManager
 
         new_effect_manager = EffectManager()
-    except (ImportError, ValueError, TypeError) as e:
-        print(f"Warning: EffectManager reset import failed: {e}", file=sys.stderr)
-
-        class _FallbackEffectManager:
-            def start_slide(self, _sr: Any) -> None:
-                return
-
-            def start_merge(self, _merges: Any) -> None:
-                return
-
-            def update(self, _dt: float) -> None:
-                return
-
-            def draw(self, _surface: Any, _layout: Any) -> None:
-                return
-
-            def is_animating(self) -> bool:
-                return False
-
-        new_effect_manager = _FallbackEffectManager()
+    except ImportError as e:
+        raise ImportError(
+            f"pygame-ce not installed, run poetry install or pip install pygame-ce ^2.5.0. Original: {e}"
+        ) from e
 
     try:
         from src.render.hud import ToastManager
 
         new_toast_manager = ToastManager()
-    except (ImportError, ValueError, TypeError) as e:
-        print(f"Warning: ToastManager reset import failed: {e}", file=sys.stderr)
-
-        class _FallbackToastManager:
-            def __init__(self) -> None:
-                self.toasts: list[Any] = []
-
-            def push(self, _ach: Any) -> None:
-                return
-
-            def update(self, _dt: float) -> None:
-                return
-
-            def draw(self, _surface: Any) -> None:
-                return
-
-            def has_visible(self) -> bool:
-                return False
-
-        new_toast_manager = _FallbackToastManager()
+    except ImportError as e:
+        raise ImportError(
+            f"pygame-ce not installed, run poetry install or pip install pygame-ce ^2.5.0. Original: {e}"
+        ) from e
 
     merge_captured = False
     toast_captured = False
@@ -461,25 +429,9 @@ def main() -> None:
 
         effect_manager = EffectManager()
     except ImportError as e:
-        print(f"Warning: EffectManager import failed: {e}", file=sys.stderr)
-
-        class _FallbackEffectManager:
-            def start_slide(self, _sr: Any) -> None:
-                return
-
-            def start_merge(self, _merges: Any) -> None:
-                return
-
-            def update(self, _dt: float) -> None:
-                return
-
-            def draw(self, _surface: Any, _layout: Any) -> None:
-                return
-
-            def is_animating(self) -> bool:
-                return False
-
-        effect_manager = _FallbackEffectManager()
+        raise ImportError(
+            f"pygame-ce not installed, run poetry install or pip install pygame-ce ^2.5.0. Original: {e}"
+        ) from e
 
     toast_manager: Any = None
     try:
@@ -487,25 +439,9 @@ def main() -> None:
 
         toast_manager = ToastManager()
     except ImportError as e:
-        print(f"Warning: ToastManager import failed: {e}", file=sys.stderr)
-
-        class _FallbackToastManager:
-            def __init__(self) -> None:
-                self.toasts: list[Any] = []
-
-            def push(self, _ach: Any) -> None:
-                return
-
-            def update(self, _dt: float) -> None:
-                return
-
-            def draw(self, _surface: Any) -> None:
-                return
-
-            def has_visible(self) -> bool:
-                return False
-
-        toast_manager = _FallbackToastManager()
+        raise ImportError(
+            f"pygame-ce not installed, run poetry install or pip install pygame-ce ^2.5.0. Original: {e}"
+        ) from e
 
     layout: Any = None
     try:
@@ -535,7 +471,7 @@ def main() -> None:
                 return (0, 0, 700, 120)
 
             def toast_rect(self, index: int) -> Tuple[int, int, int, int]:
-                return (700 - 280 - 10, 10 + index * (60 + 10), 280, 60)
+                return (10, 10 + index * (60 + 10), 200, 60)
 
         layout = _SimpleLayout()
     except (ImportError, ValueError, TypeError, AttributeError) as e:
