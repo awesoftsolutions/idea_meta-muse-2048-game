@@ -3,17 +3,25 @@
 Purpose: Implements ScoreState dataclass with current_score, high_score,
     high_score_path, last_save_success, plus methods add, load, save with
     atomic write via temp file rename and corrupt handling treating
-    missing/empty/invalid JSON as zero per ADR-012, E003.
+    missing/empty/invalid JSON as zero per ADR-012, E003. Phase 6 packaging
+    hardening adds writable fallback sys._MEIPASS aware.
 
-System: src/core per Phase 2 architecture ADR-012, ADR-015.
+System: src/core per Phase 2 architecture ADR-012, ADR-015, Phase 6 ADR-038.
 
-Dependencies: stdlib only — json, os, tempfile, pathlib, dataclasses, typing.
+Dependencies: stdlib only — json, os, sys, tempfile, pathlib, dataclasses, typing.
     Never pygame-ce per ADR-015.
 
-Used-by: src/core/__init__.py exports, tests/test_score.py, future game loop.
+Used-by: src/core/__init__.py exports, tests/test_score.py, src/main.py packaging,
+    future game loop.
 
 Public interface:
-    - DEFAULT_HIGH_SCORE_PATH: Path = Path.home() / ".favur2048" / "high_score.json"
+    - WRITABLE_DIR_NAME: str = ".favur-2048" writable user dir for frozen binary
+    - HIGHSCORE_FILENAME: str = "highscore.json" file name in writable dir
+    - LEGACY_HIGH_SCORE_PATH: Path = Path.home() / ".favur2048" / "high_score.json" backward compat
+    - DEFAULT_HIGH_SCORE_PATH: Path = Path.home() / ".favur-2048" / "highscore.json" new location
+    - _is_frozen() -> bool: checks sys._MEIPASS or sys.frozen for PyInstaller frozen binary
+    - get_writable_dir() -> Path: returns writable user dir Path.home()/.favur-2048 mkdir parents True exist_ok True OSError fallback
+    - get_highscore_path() -> Path: returns writable_dir/highscore.json sys._MEIPASS aware resource vs data separation
     - _validate_high_score_data(data) -> int: validates dict with high_score key int>=0 not bool
     - ScoreState: dataclass current_score, high_score, high_score_path, last_save_success
       methods __init__(high_score_path Optional[Path], initial_high_score int),

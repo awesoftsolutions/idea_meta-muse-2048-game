@@ -4,6 +4,8 @@ Implements production main loop per ADR-019 with real 5x5 board,
 GameState ownership per ADR-016, turn pipeline locked per ADR-009,
 EffectManager wiring per Phase 4 ADR-021 ADR-026, HUD ToastManager
 GameOverOverlay R restart screenshot hooks per Sprint3 Task1 3 PNGs.
+Phase 6 packaging hardening adds sys._MEIPASS aware frozen binary handling
+and Q-018 toast fix base_y 130 below HUD_H 120px.
 
 Purpose:
     Production entry point with pygame-ce API verification, 700x800
@@ -17,10 +19,12 @@ Purpose:
     resetting Board GameState Score History Achievements EffectManager
     ToastManager, screenshot capture 3 PNGs phase-4-merge.png
     phase-4-toast.png phase-4-gameover.png valid PNG header 89 50 4E 47
-    700x800, manifest update for README.md.
+    700x800, manifest update for README.md. Packaging hardening ensures
+    frozen binary sys._MEIPASS aware and writable fallback for high-score.
 
 System:
-    MainLoopProduction per Phase 3/4 architecture ADR-019 ADR-026.
+    MainLoopProduction per Phase 3/4 architecture ADR-019 ADR-026,
+    Phase 6 ADR-038 packaging hardening and ADR-039 Q-018 fix.
     Part of src/ subsystem per Phase 4 architecture IMainLoopPhase4,
     IVisualProofPhase4.
 
@@ -42,6 +46,11 @@ Used-by:
     - visual-proof gating via capture_screenshot and update_manifest
 
 Public Interface:
+    _get_frozen_base_path() -> Path
+        Returns base path handling frozen binary sys._MEIPASS aware resource vs data separation.
+        Checks sys._MEIPASS or sys.frozen, returns Path(sys._MEIPASS) or executable parent or cwd.
+    _is_frozen_binary() -> bool
+        Checks if running as frozen binary via sys._MEIPASS or sys.frozen attribute.
     verify_pygame_api() -> bool
         Verifies pygame-ce APIs exist via hasattr, raises ImportError if missing.
     create_initial_board(rng: random.Random) -> Board
@@ -57,8 +66,13 @@ Public Interface:
     update_manifest(manifest_path: str, file_name: str, description: str, input_sequence: str, observation_id: str) -> bool
         Appends manifest entry to README.md per SOW Visual Verification Protocol.
         Returns True on success False on OSError.
-    reset_game_state(rng: random.Random, board: Board, score: ScoreState, history: HistoryStack, achievements: Achievements, game_state: GameState, effect_manager: Any, toast_manager: Any) -> Tuple[Board, ScoreState, HistoryStack, Achievements, GameState, Any, Any, bool, bool, bool]
+    reset_game_state(rng: random.Random, board: Board, score: ScoreState, history: HistoryStack, achievements: Achievements, game_state: GameState, effect_manager: Any, toast_manager: Any) -> Tuple[Board, ScoreState, HistoryStack, Achievements, GameState, Any, Any, bool, bool, bool, bool]
         Resets all state on R restart when is_game_over true, preserves high_score.
+    _SimpleLayout (internal helper class inside main())
+        Internal layout helper for board_origin, cell_size, cell_gap, board_size_px,
+        methods cell_rect(r,c), board_background_rect(), hud_rect(), toast_rect(index)
+        with Q-018 fix base_y 130 below HUD_H 120 y=130+idx*(60+10) to avoid Score (20,20) and Best 550.
+        Defined inside main() for packaging minimal change, cohesive main loop responsibility.
     main() -> None
         Production main loop 700x800 Favur 2048 exact title non-resizable flags=0,
         Board(rng) single 2 tile heat 0, ScoreState HistoryStack Achievements
