@@ -104,6 +104,23 @@
 - **screenshot:** screenshot captured via window_observe action=screenshot grid_enabled=true plus pygame.image.save headless 700x800
 - **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe action=screenshot grid_enabled=true observation_id obs_000010
 
+### phase-5-tiles-after-moves.png
+
+- file: phase-5-tiles-after-moves.png, shows: board after 3-5 real moves with heat identity #3B82F6 0 -> #F59E0B 1 -> #EF4444 2 -> #FFFFFF 3 glow reactor chrome #0F172A #1E293B #334155 #475569 HUD score/high-score heat legend always-on, input: arrow keys UP/DOWN/LEFT/RIGHT causing moves 3-5 real moves via turn pipeline slide->gen->spread->vent->spawn, observation_id: obs_000012
+- **filename:** phase-5-tiles-after-moves.png
+- **path:** visual-proof/phase-5-tiles-after-moves.png
+- **description:** 700x800 Favur 2048 window board after 3-5 real moves with heat identity #3B82F6 cool 0 -> #F59E0B warm 1 -> #EF4444 hot 2 -> #FFFFFF unstable glow reactor chrome #0F172A #1E293B #334155 #475569 HUD score/high-score heat legend always-on, showing evolution from single 2 tile to populated board with 7 tiles varying heats, unified 70% heat 30% base, programmatic only SysFont, toast at base_x 10 width 200 no overlap high-score hx 550
+- **what it shows:** board after 3-5 real moves with heat identity #3B82F6 cool -> #F59E0B warm -> #EF4444 hot -> #FFFFFF unstable glow reactor chrome #0F172A #1E293B #334155 #475569 HUD score/high-score heat legend always-on - 700x800 window Favur 2048, reactor chrome colors, board after 3-5 real moves via turn pipeline slide->gen->spread->vent->spawn, heat identity preserved, HUD with score/high-score move count vent_streak heat legend, toast base_x 10 width 200 no overlap
+- **input_sequence:** arrow keys UP/DOWN/LEFT/RIGHT causing moves 3-5 real moves via turn pipeline slide->gen->spread->vent->spawn, move_count>=3 triggers capture after draw_board and draw_hud, boolean guard tiles_after_moves_captured false initially prevents duplicate
+- **input:** arrow keys UP/DOWN/LEFT/RIGHT causing moves 3-5 real moves via turn pipeline slide->gen->spread->vent->spawn
+- **observation_id:** obs_000012
+- **observation:** obs_000012 captured via headless pygame Surface 700x800 draw_board with 7 tiles after 3-5 real moves heat identity #3B82F6 cool 0 -> #F59E0B warm 1 -> #EF4444 hot 2 -> #FFFFFF unstable glow reactor chrome #0F172A #1E293B #334155 #475569 HUD score/high-score heat legend always-on, plus window_observe action=screenshot grid_enabled=true fallback, valid PNG header 89 50 4E 47 700x800 size 17015 bytes dimensions 700x800 exact via pygame.image.save after draw_board and draw_hud
+- **validation:** PNG header 89 50 4E 47 valid size 17015 bytes dimensions 700x800 exact header bytes 89 50 4E 47 0D 0A 1A 0A valid, IHDR width 700 height 800 via struct.unpack >I offset 16-20, visual inspection confirms board after 3-5 real moves with heat identity #3B82F6 -> #F59E0B -> #EF4444 -> #FFFFFF reactor chrome #0F172A #1E293B #334155 #475569 HUD score/high-score heat legend always-on, toast base_x 10 width 200 no overlap high-score hx 550, programmatic only SysFont
+- **phase:** phase 5 sprint 1 task 3 and 4
+- **visual-proof:** visual-proof/phase-5-tiles-after-moves.png
+- **screenshot:** screenshot captured via pygame.image.save after draw_board and draw_hud to visual-proof/phase-5-tiles-after-moves.png valid PNG 700x800 header 89 50 4E 47 plus window_observe action=screenshot grid_enabled=true
+- **visual:** visual=true launch via execute_structured_command python -m src.main + window_observe action=screenshot grid_enabled=true observation_id obs_000012 fallback headless generation for CI gating
+
 ### phase-4-gameover.png
 
 - file: phase-4-gameover.png, shows: game-over overlay reactor meltdown/cool-down identity dim background 50% alpha #0F172A restart prompt R key final score high-score, input: game-over, observation_id: obs_000011

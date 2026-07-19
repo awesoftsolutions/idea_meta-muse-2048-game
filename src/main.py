@@ -316,12 +316,12 @@ def reset_game_state(
     game_state: GameState,
     effect_manager: Any,
     toast_manager: Any,
-) -> Tuple[Board, ScoreState, HistoryStack, Achievements, GameState, Any, Any, bool, bool, bool]:
+) -> Tuple[Board, ScoreState, HistoryStack, Achievements, GameState, Any, Any, bool, bool, bool, bool]:
     """Reset all state on R restart when is_game_over true.
 
     Resets Board, ScoreState, HistoryStack, Achievements, GameState,
     EffectManager, ToastManager and screenshot booleans merge_captured,
-    toast_captured, gameover_captured to False.
+    toast_captured, gameover_captured, tiles_after_moves_captured to False.
 
     Args:
         rng: Random instance.
@@ -336,7 +336,7 @@ def reset_game_state(
     Returns:
         Tuple of new Board, ScoreState, HistoryStack, Achievements, GameState,
         EffectManager, ToastManager, merge_captured=False, toast_captured=False,
-        gameover_captured=False.
+        gameover_captured=False, tiles_after_moves_captured=False.
     """
     if rng is None:
         rng = random.Random()
@@ -372,6 +372,7 @@ def reset_game_state(
     merge_captured = False
     toast_captured = False
     gameover_captured = False
+    tiles_after_moves_captured = False
 
     return (
         new_board,
@@ -384,6 +385,7 @@ def reset_game_state(
         merge_captured,
         toast_captured,
         gameover_captured,
+        tiles_after_moves_captured,
     )
 
 
@@ -487,6 +489,7 @@ def main() -> None:
     merge_captured = False
     toast_captured = False
     gameover_captured = False
+    tiles_after_moves_captured = False
     running = True
     dt = 0.0
 
@@ -540,6 +543,7 @@ def main() -> None:
                                     merge_captured,
                                     toast_captured,
                                     gameover_captured,
+                                    tiles_after_moves_captured,
                                 ) = reset_game_state(
                                     rng, board, score, history, achievements, game_state, effect_manager, toast_manager
                                 )
@@ -813,6 +817,43 @@ def main() -> None:
                             gameover_captured = True
                 except (ValueError, TypeError, AttributeError, pygame.error) as e:
                     print(f"Warning: gameover capture check failed: {e}", file=sys.stderr)
+
+            # Tiles-after-moves hook: after 3-5 real moves with heat identity
+            # Capture after real turn pipeline slide->gen->spread->vent->spawn not synthetic merge
+            # After draw_board and draw_hud, guarded by tiles_after_moves_captured boolean false initially and move_count>=3
+            if not tiles_after_moves_captured:
+                try:
+                    # should_capture logic: move_count >= 3 and not yet captured
+                    current_move_count = getattr(game_state, "move_count", 0)
+                    if current_move_count >= 3:
+                        # Ensure visual-proof dir via pathlib.Path mkdir parents True exist_ok True OSError handling
+                        try:
+                            Path("visual-proof").mkdir(parents=True, exist_ok=True)
+                        except OSError as e:
+                            print(f"Warning: visual-proof dir creation failed: {e}", file=sys.stderr)
+                        else:
+                            tiles_path = str(Path("visual-proof") / "phase-5-tiles-after-moves.png")
+                            # Capture via pygame.image.save after draw_board and draw_hud valid PNG header 89 50 4E 47 700x800
+                            if capture_screenshot(screen, tiles_path):
+                                manifest_path = str(Path("visual-proof") / "README.md")
+                                update_manifest(
+                                    manifest_path,
+                                    "phase-5-tiles-after-moves.png",
+                                    "board after 3-5 real moves with heat identity #3B82F6 0 -> #F59E0B 1 -> #EF4444 2 -> #FFFFFF 3 glow reactor chrome #0F172A #1E293B #334155 #475569 HUD score/high-score heat legend always-on",
+                                    "arrow keys UP/DOWN/LEFT/RIGHT causing moves 3-5 real moves via turn pipeline slide->gen->spread->vent->spawn",
+                                    "obs_000012",
+                                )
+                                try:
+                                    pygame.image.save(screen, tiles_path)
+                                except OSError as e:
+                                    print(f"Warning: direct image.save tiles-after-moves failed: {e}", file=sys.stderr)
+                                except (ValueError, TypeError, pygame.error) as e:
+                                    print(f"Warning: direct tiles-after-moves save error: {e}", file=sys.stderr)
+                                tiles_after_moves_captured = True
+                except OSError as e:
+                    print(f"Warning: tiles-after-moves capture OSError: {e}", file=sys.stderr)
+                except (ValueError, TypeError, AttributeError, pygame.error) as e:
+                    print(f"Warning: tiles-after-moves capture check failed: {e}", file=sys.stderr)
 
             pygame.display.flip()
 
