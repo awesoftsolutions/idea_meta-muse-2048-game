@@ -1,12 +1,35 @@
 """Infra validation script for Phase 6 CI readiness gating readiness PASS check.
 
-Purpose: Validate visual-proof directory contains 5 required PNGs with valid
-header 89 50 4E 47 700x800 and manifest complete naming file what it shows
-input sequence observation_id obs_000001-012 per SOW gating requirement.
+Purpose:
+    Validate visual-proof directory contains 5 required PNGs with valid
+    header 89 50 4E 47 700x800 and manifest complete naming file what it shows
+    input sequence observation_id obs_000001-012 per SOW gating requirement.
 
-This script uses stdlib only (pathlib, sys, struct, re) to be runnable in CI
-without display. PNG header validation via reading first 8 bytes and checking
-89 50 4E 47, dimensions via IHDR chunk struct.unpack >I at offset 16-20.
+System:
+    Phase 6 CI & Packaging — visual-proof gating final validation.
+    Part of BinaryBuildValidation and VisualProofGatingFinal components.
+
+Dependencies:
+    stdlib only: pathlib, sys, struct, re, typing.Any
+    No pygame, no external deps — runnable in CI without display.
+    PNG header validation via first 8 bytes 89 50 4E 47,
+    dimensions via IHDR chunk struct.unpack >I at offset 16-20.
+
+Used-by:
+    - CI workflow .github/workflows/ci.yml (optional validation step)
+    - Manual gating check: python scripts/validate_visual_proof.py
+    - Tests: test_visual_proof_gating_final.py, test_gating_readiness.py
+
+Public Interface:
+    validate_png_header(path: str) -> dict[str, Any]:
+        Check PNG exists, size>0, header 89 50 4E 47, dimensions 700x800 via IHDR.
+    validate_manifest(manifest_path: str = MANIFEST_PATH) -> dict[str, Any]:
+        Check README contains 7+ entries with file, what it shows, input sequence,
+        observation_id obs_000001-012.
+    validate_gating() -> dict[str, Any]:
+        Check 5 required PNGs exist valid header manifest complete per SOW gating.
+    main() -> int:
+        Run validation, print PASS/FAIL, return exit code 0/1.
 
 Constants:
     REQUIRED_PNGS: 5 SOW-required PNGs
@@ -16,15 +39,6 @@ Constants:
     EXPECTED_DIMS: (700, 800) SOW fixed window size
     MANIFEST_PATH: visual-proof/README.md
     VISUAL_PROOF_DIR: visual-proof
-
-Functions:
-    validate_png_header(path): Check PNG exists, size>0, header 89 50 4E 47,
-        dimensions 700x800 via IHDR.
-    validate_manifest(manifest_path): Check README contains 7+ entries with
-        file, what it shows, input sequence, observation_id obs_000001-012.
-    validate_gating(): Check 5 required PNGs exist valid header manifest
-        complete per SOW gating.
-    main(): Run validation, print PASS/FAIL, return exit code 0/1.
 """
 # CHANGELOG:
 # - Phase 5 Sprint 2: CREATED validation script 396 lines gating PASS manifest
@@ -37,6 +51,23 @@ Functions:
 #   5 required PNGs valid header manifest complete SOW gating, main PASS/FAIL
 #   exit code 0/1, stdlib only pathlib sys struct re CI readiness packaging
 #   hardening sys._MEIPASS aware validation.
+# - Phase 6 Sprint 2: ENHANCED DOCSTRING + INFRA VALIDATION GATING READINESS —
+#   docstring enhanced with System (Phase 6 CI & Packaging visual-proof gating
+#   final validation BinaryBuildValidation VisualProofGatingFinal),
+#   Dependencies (stdlib only pathlib sys struct re typing.Any no pygame
+#   header 89 50 4E 47 IHDR struct.unpack >I offset 16-20 runnable CI without
+#   display), Used-by (CI workflow .github/workflows/ci.yml optional step
+#   manual gating python scripts/validate_visual_proof.py tests
+#   test_visual_proof_gating_final test_gating_readiness), Public Interface
+#   (validate_png_header path->dict exists size>0 header 89 50 4E 47 700x800
+#   IHDR, validate_manifest 10 entries obs_000001-012 file what it shows input
+#   sequence observation_id, validate_gating 5 required PNGs valid header
+#   manifest complete SOW gating, main PASS/FAIL exit 0/1), validation
+#   functions validate_png_header checking header 89 50 4E 47 700x800 size>0
+#   via struct.unpack >I, validate_manifest 10 entries obs_000001-012,
+#   validate_gating 5 required PNGs valid header manifest complete, main
+#   PASS/FAIL exit 0/1, stdlib only, infra improvement for gating readiness,
+#   CI workflow final validation.
 
 from __future__ import annotations
 
