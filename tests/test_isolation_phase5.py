@@ -12,7 +12,7 @@ Sprint: registry://sprints/phase-5-sprint-2.md
 - AC-9 hud.py HUD score high-score move count vent_streak unstable_survival heat legend always-on reactor chrome
 - AC-10 headless importable all core modules without DISPLAY
 
-System: Isolation verification per pseudocode phase_5_sprint_1_task_3_4_code.md
+System: Isolation verification per pseudocode phase_5_sprint_2_task_2_4_code.md
 Dependencies: stdlib sys re pathlib struct importlib, pytest, src.core.*
 """
 
