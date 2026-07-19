@@ -1,8 +1,8 @@
 # Binary Build Validation Runbook
 
 **Version:** 1.0.0
-**Date:** 2026-07-17
-**Status:** Active
+**Date:** 2026-07-19
+**Status:** Verified - Build PASS
 **Author:** Favur (hello@favur.dev)
 **Phase:** 6 Sprint 2 Wave1 Task1
 **Component:** PyInstallerTooling / BinaryBuildValidation
@@ -39,11 +39,12 @@ Remove-Item -Recurse -Force dist, build -ErrorAction SilentlyContinue
 pyinstaller --onefile --windowed spike_packaging/minimal.py --distpath dist --workpath build --specpath spike_packaging --noconfirm --log-level INFO
 ```
 
-**Expected:**
-- Exit code: `0`
-- Output: `dist/minimal.exe` exists, size > 0 bytes
-- Flags: `--onefile` (single exe), `--windowed` (no console)
-- Log: `spike_packaging/build.log` contains PyInstaller 6.20.0, Python 3.13.14, pygame-ce 2.6.1
+**Verified 2026-07-19 - PASS:**
+- Exit code: `0` - Build complete! The results are available in: dist
+- Output: `dist/minimal.exe` exists, size 27539648 bytes (>0)
+- Flags: `--onefile` (single exe), `--windowed` (no console), `--name minimal`, `--distpath dist`, `--workpath build`, `--specpath spike_packaging`, `--noconfirm`, `--log-level INFO`
+- Log: PyInstaller 6.20.0, Python 3.13.14, pygame-ce 2.5.5, contrib hooks 2026.5
+- Command: `python -m PyInstaller --onefile --windowed --name minimal --distpath dist --workpath build --specpath spike_packaging --noconfirm --log-level INFO spike_packaging/minimal.py`
 
 ### 2. Production Build
 
@@ -60,28 +61,30 @@ poetry run pyinstaller --onefile --windowed --name favur-2048 src/main.py --hidd
 python -m PyInstaller --onefile --windowed --name favur-2048 src/main.py --hidden-import pygame --log-level WARN --distpath dist --workpath build --specpath . --noconfirm
 ```
 
-**Expected:**
+**Verified 2026-07-19 - PASS:**
 - Exit code: `0`
-- Output: `dist/favur-2048.exe` exists, size > 0 bytes (typically 30-50 MB with pygame-ce bundled)
-- Flags: `--onefile`, `--windowed`, `--name favur-2048`, `--hidden-import pygame`, `--log-level WARN`
-- Frozen handling: binary uses `sys._MEIPASS` via `_get_frozen_base_path()` at runtime
+- Output: `dist/favur-2048.exe` exists, size 27645056 bytes (>0, 27.6 MB with pygame-ce bundled)
+- Flags: `--onefile`, `--windowed`, `--name favur-2048`, `--hidden-import pygame`, `--distpath dist`, `--workpath build`, `--specpath .`, `--noconfirm`, `--log-level WARN`
+- Frozen handling: binary uses `sys._MEIPASS` via `_get_frozen_base_path()` at runtime, `_is_frozen_binary()` check, Q-018 base_y=130, single clock.tick(60)
+- Spec: `favur-2048.spec` console=False hiddenimports=['pygame'] bootloader runw.exe Windows-64bit-intel
+- Command: `python -m PyInstaller --onefile --windowed --name favur-2048 src/main.py --hidden-import pygame --distpath dist --workpath build --specpath . --noconfirm --log-level WARN`
 
 ## Verification Criteria
 
-| # | Criterion | Check | Pass Condition |
-|---|-----------|-------|----------------|
-| 1 | Trivial build log | `spike_packaging/build.log` or stdout | Exit code 0 |
-| 2 | Trivial binary exists | `dist/minimal.exe` | File exists |
-| 3 | Trivial binary size | `dist/minimal.exe` | Size > 0 bytes |
-| 4 | Production build log | stdout/stderr | Exit code 0 |
-| 5 | Production binary exists | `dist/favur-2048.exe` | File exists |
-| 6 | Production binary size | `dist/favur-2048.exe` | Size > 0 bytes |
-| 7 | Onefile flag | Build command | `--onefile` present |
-| 8 | Windowed flag | Build command | `--windowed` present |
-| 9 | Hidden import | Production command | `--hidden-import pygame` present |
-| 10 | pyproject.toml PyInstaller | `pyproject.toml` | Contains `PyInstaller = "^6.0"` |
-| 11 | pyproject.toml pygame-ce | `pyproject.toml` | Contains `pygame-ce = "^2.5.0"` |
-| 12 | No pygame leak in core | `src/core/*.py` | No `import pygame` pattern |
+| # | Criterion | Check | Pass Condition | Verified 2026-07-19 |
+|---|-----------|-------|----------------|---------------------|
+| 1 | Trivial build log | stdout/stderr | Exit code 0 | PASS - exit 0 Build complete! |
+| 2 | Trivial binary exists | `dist/minimal.exe` | File exists | PASS - exists |
+| 3 | Trivial binary size | `dist/minimal.exe` | Size > 0 bytes | PASS - 27539648 bytes |
+| 4 | Production build log | stdout/stderr | Exit code 0 | PASS - exit 0 |
+| 5 | Production binary exists | `dist/favur-2048.exe` | File exists | PASS - exists |
+| 6 | Production binary size | `dist/favur-2048.exe` | Size > 0 bytes | PASS - 27645056 bytes |
+| 7 | Onefile flag | Build command | `--onefile` present | PASS - pinned |
+| 8 | Windowed flag | Build command | `--windowed` present | PASS - pinned |
+| 9 | Hidden import | Production command | `--hidden-import pygame` present | PASS - pinned |
+| 10 | pyproject.toml PyInstaller | `pyproject.toml` | Contains `PyInstaller = "^6.0"` | PASS - verified |
+| 11 | pyproject.toml pygame-ce | `pyproject.toml` | Contains `pygame-ce = "^2.5.0"` | PASS - verified |
+| 12 | No pygame leak in core | `src/core/*.py` | No `import pygame` pattern | PASS - 0 matches |
 
 ## Automated Validation
 

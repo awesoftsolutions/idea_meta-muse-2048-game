@@ -1,0 +1,46 @@
+# Favur 2048 - PyInstaller Binary Build Log
+# Date: 2026-07-19
+# Tooling: PyInstaller 6.20.0, contrib hooks 2026.5, Python 3.13.14, pygame-ce 2.5.5 SDL 2.32.6
+# Phase: 6 Sprint 2 Wave1 Task1 - Binary Build Validation
+
+## Trivial Spike Build
+Command: python -m PyInstaller --onefile --windowed --name minimal --distpath dist --workpath build --specpath spike_packaging --noconfirm --log-level INFO spike_packaging/minimal.py
+Exit Code: 0
+Output: dist/minimal.exe exists size 27539648 bytes >0
+Flags: --onefile --windowed --name minimal --distpath dist --workpath build --specpath spike_packaging --noconfirm --log-level INFO
+Log Excerpt:
+121 INFO: PyInstaller: 6.20.0, contrib hooks: 2026.5
+122 INFO: Python: 3.13.14
+149 INFO: Platform: Windows-11-10.0.22631-SP0
+150 INFO: wrote spike_packaging\minimal.spec
+576 INFO: checking Analysis
+576 INFO: Building Analysis because Analysis-00.toc is non existent
+6437 INFO: Processing standard module hook 'hook-pygame.py' from C:\Python313\Lib\site-packages\pygame\__pyinstaller
+15265 INFO: Graph cross-reference written to build\minimal\xref-minimal.html
+20593 INFO: Bootloader C:\Python313\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+22337 INFO: Building EXE from EXE-00.toc completed successfully.
+22339 INFO: Build complete! The results are available in: dist
+Result: PASS - trivial binary built successfully
+
+## Production Build
+Command: python -m PyInstaller --onefile --windowed --name favur-2048 src/main.py --hidden-import pygame --distpath dist --workpath build --specpath . --noconfirm --log-level WARN
+Fallback Command: poetry run pyinstaller --onefile --windowed --name favur-2048 src/main.py --hidden-import pygame --log-level WARN --distpath dist --workpath build --specpath . --noconfirm
+Exit Code: 0
+Output: dist/favur-2048.exe exists size 27645056 bytes >0 (27.6 MB)
+Flags: --onefile --windowed --name favur-2048 --hidden-import pygame --distpath dist --workpath build --specpath . --noconfirm --log-level WARN
+Spec: favur-2048.spec console=False hiddenimports=['pygame'] bootloader runw.exe Windows-64bit-intel
+Frozen Handling: src/main.py _get_frozen_base_path() handles sys._MEIPASS and sys.frozen, _is_frozen_binary(), Q-018 base_y=130, single clock.tick(60)
+Result: PASS - production binary built successfully
+
+## Verification Summary
+- pyproject.toml: pygame-ce = "^2.5.0" FOUND, PyInstaller = "^6.0" FOUND
+- src/core/*.py: 0 pygame imports (no leak) PASS
+- dist/minimal.exe: exists True size 27539648 PASS
+- dist/favur-2048.exe: exists True size 27645056 PASS
+- Trivial build exit 0 PASS
+- Production build exit 0 PASS
+- Onefile flag present PASS
+- Windowed flag present PASS
+- Hidden import pygame present PASS
+
+All criteria PASS - Binary build validation complete.
