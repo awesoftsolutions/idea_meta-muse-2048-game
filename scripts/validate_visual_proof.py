@@ -112,11 +112,15 @@ def validate_png_header(path: str) -> dict[str, Any]:
             return result
 
         if data[:4] != PNG_HEADER_4:
-            result["error"] = f"Invalid PNG header 4: {path} got {data[:4].hex()} expected 89504e47"
+            result["error"] = (
+                f"Invalid PNG header 4: {path} got {data[:4].hex()} expected 89504e47"
+            )
             return result
 
         if data[:8] != PNG_HEADER_8:
-            result["error"] = f"Invalid PNG header 8: {path} got {data[:8].hex()} expected 89504e470d0a1a0a"
+            result["error"] = (
+                f"Invalid PNG header 8: {path} got {data[:8].hex()} expected 89504e470d0a1a0a"
+            )
             return result
 
         result["header_valid"] = True
@@ -210,7 +214,9 @@ def validate_manifest(manifest_path: str = MANIFEST_PATH) -> dict[str, Any]:
 
         # Check for 'shows:' or 'what it shows' substring
         has_shows = ("shows:" in content) or ("what it shows" in content.lower())
-        has_input = ("input:" in content.lower()) or ("input_sequence" in content.lower())
+        has_input = ("input:" in content.lower()) or (
+            "input_sequence" in content.lower()
+        )
         has_obs_id_label = "observation_id" in content.lower()
 
         # Use regex to find all obs_00000\d+ or obs_0000\d+ patterns
@@ -242,7 +248,9 @@ def validate_manifest(manifest_path: str = MANIFEST_PATH) -> dict[str, Any]:
             if entry_count < 7:
                 missing_parts.append(f"entry_count {entry_count} <7")
             if not result["has_required_files"]:
-                missing_parts.append(f"missing required files, found {required_present}")
+                missing_parts.append(
+                    f"missing required files, found {required_present}"
+                )
             if not result["has_observation_ids"]:
                 missing_parts.append(f"observation_ids {len(distinct_obs)} <7")
             if not has_shows:
