@@ -1,6 +1,22 @@
 # Favur 2048
 
-[![CI](https://github.com/placeholder/repo/actions/workflows/ci.yml/badge.svg)](https://github.com/placeholder/repo/actions/workflows/ci.yml)
+[![CI](https://github.com/awesoftsolutions/idea_meta-muse-2048-game/actions/workflows/ci.yml/badge.svg)](https://github.com/awesoftsolutions/idea_meta-muse-2048-game/actions/workflows/ci.yml)
+
+## Demo
+
+![Favur 2048 gameplay demo](docs/demo.gif)
+
+---
+
+## Links
+
+| | |
+|---|---|
+| 🎬 **YouTube** | [Watch the full Favur run video](https://youtu.be/o0fQ7WQRTjo) |
+| 📊 **Eval Run** | [View evaluation results on Favur](https://evals.favur.dev/runs/the2048__meta-muse-spark-1.1-7.19.2026) |
+| 🔁 **Replay** | [Replay this run in Favur Drive](https://favur.dev/drive/the2048__meta-muse-spark-1.1-7.19.2026) |
+
+---
 
 ## Overview
 Favur 2048 is a reimagined 5x5 tile-merging puzzle built with Pygame. Slide tiles, merge matching values, chase high scores — but with a twist that adds constant tension and distinct identity beyond vanilla 2048.

@@ -35,7 +35,7 @@ jobs:
         run: poetry install --no-interaction --no-root
 
       - name: Run tests
-        run: poetry run pytest --no-cov -q
+        run: poetry run pytest -q
 
   build:
     runs-on: ubuntu-latest
