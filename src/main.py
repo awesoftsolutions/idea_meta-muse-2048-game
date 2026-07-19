@@ -103,6 +103,30 @@ from src.core.rules import is_game_over, is_legal_move
 from src.core.score import ScoreState
 
 
+def _get_frozen_base_path() -> Path:
+    """Get base path handling frozen binary sys._MEIPASS aware.
+
+    Returns:
+        Base path for resources, handling PyInstaller frozen binary.
+    """
+    # sys._MEIPASS aware for frozen binary resource vs data separation
+    if hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    if getattr(sys, "frozen", False):
+        # frozen binary, use executable dir
+        return Path(sys.executable).parent
+    return Path.cwd()
+
+
+def _is_frozen_binary() -> bool:
+    """Check if running as frozen binary.
+
+    Returns:
+        True if sys._MEIPASS exists or sys.frozen set.
+    """
+    return hasattr(sys, "_MEIPASS") or bool(getattr(sys, "frozen", False))
+
+
 def verify_pygame_api() -> bool:
     """Verify required pygame-ce APIs exist via hasattr.
 
@@ -477,7 +501,9 @@ def main() -> None:
                 return (0, 0, 700, 120)
 
             def toast_rect(self, index: int) -> Tuple[int, int, int, int]:
-                return (10, 10 + index * (60 + 10), 200, 60)
+                # Q-018 fix: base_y 130 below HUD_H 120px y=130+idx*(60+10)
+                base_y = 130  # below HUD_H 120px
+                return (10, base_y + index * (60 + 10), 200, 60)  # 130+idx*(60+10)
 
         layout = _SimpleLayout()
     except (ImportError, ValueError, TypeError, AttributeError) as e:

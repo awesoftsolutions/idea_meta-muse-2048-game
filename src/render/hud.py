@@ -374,8 +374,9 @@ class Toast:
         self.heat_treatment = derived
 
         base_x = 10
+        base_y = 130  # Q-018 fix: below HUD_H 120px to avoid Score (20,20) and Best 550
         toast_x = float(base_x + TOAST_W // 2)
-        toast_y = float(10 + TOAST_H // 2)
+        toast_y = float(base_y + TOAST_H // 2)
         if not self.particles:
             self.particles = _create_toast_particles(self.heat_treatment, toast_x, toast_y)
 
@@ -534,7 +535,8 @@ class ToastManager:
 
         for index, toast in enumerate(self.toasts):
             base_x = 10
-            base_y = 10 + toast.y_offset
+            # Q-018 fix: base_y 130 below HUD_H 120px y=130+idx*(60+10) no overlap Score (20,20) Best 550
+            base_y = 130 + toast.y_offset  # 130+idx*(60+10) where y_offset=idx*(TOAST_H+TOAST_GAP)
 
             scaled_w = int(TOAST_W * toast.scale)
             scaled_h = int(TOAST_H * toast.scale)

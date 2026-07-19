@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,7 +42,71 @@ from typing import Optional
 # Constants
 # ---------------------------------------------------------------------------
 
-DEFAULT_HIGH_SCORE_PATH: Path = Path.home() / ".favur2048" / "high_score.json"
+# Writable user dir for frozen binary packaging hardening per ADR-038
+# Primary path uses .favur-2048 per Phase 6 spec, fallback .favur2048 for backward compat
+WRITABLE_DIR_NAME: str = ".favur-2048"
+HIGHSCORE_FILENAME: str = "highscore.json"
+LEGACY_HIGH_SCORE_PATH: Path = Path.home() / ".favur2048" / "high_score.json"
+DEFAULT_HIGH_SCORE_PATH: Path = Path.home() / WRITABLE_DIR_NAME / HIGHSCORE_FILENAME
+
+
+def _is_frozen() -> bool:
+    """Check if running in frozen binary (PyInstaller).
+
+    Returns:
+        True if frozen via sys._MEIPASS or sys.frozen attribute.
+    """
+    # sys._MEIPASS aware check for PyInstaller frozen binary
+    if hasattr(sys, "_MEIPASS"):
+        return True
+    if getattr(sys, "frozen", False):
+        return True
+    return False
+
+
+def get_writable_dir() -> Path:
+    """Get writable user dir for high-score persistence.
+
+    Uses pathlib.Path.home()/.favur-2048/highscore.json fallback per ADR-038.
+    Handles OSError with fallback to relative path.
+
+    Returns:
+        Writable directory Path, created with mkdir parents=True exist_ok=True.
+    """
+    try:
+        writable_dir = Path.home() / WRITABLE_DIR_NAME
+        # Ensure dir exists with parents=True exist_ok=True
+        writable_dir.mkdir(parents=True, exist_ok=True)
+        return writable_dir
+    except OSError:
+        # Fallback to relative path if home not writable
+        try:
+            fallback = Path(".favur-2048")
+            fallback.mkdir(parents=True, exist_ok=True)
+            return fallback
+        except OSError:
+            return Path(".favur-2048")
+
+
+def get_highscore_path() -> Path:
+    """Get high-score file path in writable dir.
+
+    Returns:
+        Path to highscore.json in writable user dir.
+    """
+    # sys._MEIPASS aware: resource vs data separation
+    # For frozen binary, still use writable user dir, not _MEIPASS (read-only)
+    # _MEIPASS is for bundled resources, high-score must be writable
+    if _is_frozen():
+        # In frozen binary, use writable dir, not sys._MEIPASS
+        base = get_writable_dir()
+        return base / HIGHSCORE_FILENAME
+    return get_writable_dir() / HIGHSCORE_FILENAME
+
+
+# Backward compat alias for old path constant still used in tests
+# Keep DEFAULT_HIGH_SCORE_PATH pointing to new location
+# Old constant preserved as LEGACY_HIGH_SCORE_PATH
 
 
 # ---------------------------------------------------------------------------
