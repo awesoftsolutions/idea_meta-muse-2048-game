@@ -1,8 +1,7 @@
-"""
-tests/test_isolation_phase5.py — Isolation verification for Phase 5 Sprint 1 Tasks 3 and 4.
+"""Isolation verification for Phase 5 Sprint 2 Tasks 2 and 4.
 
-Verifies per pseudocode registry://pseudocode/phase_5_sprint_1_task_3_4_code.md:
-- AC-1 sys.modules delta no pygame after core import, grep no pygame import in core
+Pseudocode: registry://pseudocode/phase_5_sprint_2_task_2_4_code.md
+Sprint: registry://sprints/phase-5-sprint-2.md
 - AC-2 no external assets grep no image.load no font.Font file path only SysFont
 - AC-3 tiles.py no debug heat dot x+w-10 no gray fallback (200,200,200) unified 70% heat 30% base
 - AC-4 no bare except grep no except: pattern

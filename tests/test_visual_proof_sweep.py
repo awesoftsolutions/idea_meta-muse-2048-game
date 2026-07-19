@@ -1,8 +1,7 @@
-"""
-tests/test_visual_proof_sweep.py — Phase 5 Sprint 1 Tasks 3 and 4 visual-proof sweep.
+"""Visual-proof sweep verification for Phase 5 Sprint 2 Tasks 2 and 4.
 
-Pseudocode: registry://pseudocode/phase_5_sprint_1_task_3_4_code.md
-Covers AC-1 to AC-17 per Task 3 and Task 4.
+Pseudocode: registry://pseudocode/phase_5_sprint_2_task_2_4_code.md
+Sprint: registry://sprints/phase-5-sprint-2.md
 
 Validation approach:
 - Boolean guard tiles_after_moves_captured false initially and move_count>=3 check via file inspection
